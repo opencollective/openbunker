@@ -17,7 +17,6 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  verifyCode: (email: string, code: string) => Promise<void>;
   authenticateWithSecretKey: (secretKey: string) => Promise<void>;
   authenticateWithOpenBunker: () => Promise<string>;
   checkOpenBunkerCallback: (secretKey: string) => Promise<void>;
@@ -67,32 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Verification code sent to:', email);
     } catch (error) {
       console.error('Sign in error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyCode = async (email: string, code: string) => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, code }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Invalid verification code');
-      }
-
-      const userData = await response.json();
-      setUser(userData);
-      localStorage.setItem('openbunker_session', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Verification error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -192,7 +165,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signIn,
     signOut,
-    verifyCode,
     authenticateWithSecretKey,
     authenticateWithOpenBunker,
     checkOpenBunkerCallback,
