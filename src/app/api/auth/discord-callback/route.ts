@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+
+const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,13 +27,71 @@ export async function POST(request: NextRequest) {
         avatar: null,
       };
 
-      // Generate a new Nostr secret key
-      const secretKey = generateNostrSecretKey();
-
-      return NextResponse.json({
-        secretKey,
-        user: fakeDiscordUser,
+      // Try to find existing key in database by email
+      const existingKey = await prisma.keys.findFirst({
+        where: {
+          email: fakeDiscordUser.email
+        }
       });
+
+      if (existingKey) {
+        // For existing users, generate a new key since we can't retrieve their original secret key
+        console.log('Generating new Nostr key for existing development user');
+        const secretKey = generateSecretKey();
+        const publicKey = getPublicKey(secretKey);
+        const nsec = nip19.nsecEncode(secretKey);
+        const npub = nip19.npubEncode(publicKey);
+
+        // Update the existing key record with the new public key
+        await prisma.keys.update({
+          where: { npub: existingKey.npub },
+          data: {
+            npub: npub,
+            jsonData: JSON.stringify({ email: fakeDiscordUser.email }),
+            email: fakeDiscordUser.email,
+            name: fakeDiscordUser.username,
+            avatar: fakeDiscordUser.avatar,
+            relays: [],
+            enckey: '', // This might need to be generated based on your encryption scheme
+            profile: undefined,
+            ncryptsec: undefined,
+            localKey: undefined,
+          }
+        });
+
+        return NextResponse.json({
+          secretKey: nsec,
+          user: fakeDiscordUser,
+        });
+      } else {
+        // Generate a new Nostr key
+        console.log('Generating new Nostr key for development user');
+        const secretKey = generateSecretKey();
+        const publicKey = getPublicKey(secretKey);
+        const nsec = nip19.nsecEncode(secretKey);
+        const npub = nip19.npubEncode(publicKey);
+
+        // Save the new key to database
+        await prisma.keys.create({
+          data: {
+            npub: npub,
+            jsonData: JSON.stringify({ email: fakeDiscordUser.email }),
+            email: fakeDiscordUser.email,
+            name: fakeDiscordUser.username,
+            avatar: fakeDiscordUser.avatar,
+            relays: [],
+            enckey: '', // This might need to be generated based on your encryption scheme
+            profile: undefined,
+            ncryptsec: undefined,
+            localKey: undefined,
+          }
+        });
+
+        return NextResponse.json({
+          secretKey: nsec,
+          user: fakeDiscordUser,
+        });
+      }
     }
 
     // Production Discord OAuth flow
@@ -76,22 +138,81 @@ export async function POST(request: NextRequest) {
 
     const discordUser = await userResponse.json();
 
-    // Generate a new Nostr secret key
-    // In a real implementation, you might want to use a more secure method
-    // and potentially store the user information in a database
-    const secretKey = generateNostrSecretKey();
-
-    // For now, we'll return the secret key directly
-    // In a production environment, you might want to store user data and return a session token
-    return NextResponse.json({
-      secretKey,
-      user: {
-        id: discordUser.id,
-        username: discordUser.username,
-        email: discordUser.email,
-        avatar: discordUser.avatar,
-      },
+    // Try to find existing key in database by email
+    const existingKey = await prisma.keys.findFirst({
+      where: {
+        email: discordUser.email
+      }
     });
+
+    if (existingKey) {
+      // For existing users, generate a new key since we can't retrieve their original secret key
+      console.log('Generating new Nostr key for existing Discord user:', discordUser.email);
+      const secretKey = generateSecretKey();
+      const publicKey = getPublicKey(secretKey);
+      const nsec = nip19.nsecEncode(secretKey);
+      const npub = nip19.npubEncode(publicKey);
+
+      // Update the existing key record with the new public key
+      await prisma.keys.update({
+        where: { npub: existingKey.npub },
+        data: {
+          npub: npub,
+          jsonData: JSON.stringify({ email: discordUser.email }),
+          email: discordUser.email,
+          name: discordUser.username,
+          avatar: discordUser.avatar,
+          relays: [],
+          enckey: '', // This might need to be generated based on your encryption scheme
+          profile: undefined,
+          ncryptsec: undefined,
+          localKey: undefined,
+        }
+      });
+
+      return NextResponse.json({
+        secretKey: nsec,
+        user: {
+          id: discordUser.id,
+          username: discordUser.username,
+          email: discordUser.email,
+          avatar: discordUser.avatar,
+        },
+      });
+    } else {
+      // Generate a new Nostr key
+      console.log('Generating new Nostr key for Discord user:', discordUser.email);
+      const secretKey = generateSecretKey();
+      const publicKey = getPublicKey(secretKey);
+      const nsec = nip19.nsecEncode(secretKey);
+      const npub = nip19.npubEncode(publicKey);
+
+      // Save the new key to database
+      await prisma.keys.create({
+        data: {
+          npub: npub,
+          jsonData: JSON.stringify({ email: discordUser.email }),
+          email: discordUser.email,
+          name: discordUser.username,
+          avatar: discordUser.avatar,
+          relays: [],
+          enckey: '', // This might need to be generated based on your encryption scheme
+          profile: undefined,
+          ncryptsec: undefined,
+          localKey: undefined,
+        }
+      });
+
+      return NextResponse.json({
+        secretKey: nsec,
+        user: {
+          id: discordUser.id,
+          username: discordUser.username,
+          email: discordUser.email,
+          avatar: discordUser.avatar,
+        },
+      });
+    }
   } catch (error) {
     console.error('Discord callback error:', error);
     return NextResponse.json(
@@ -99,18 +220,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Simple function to generate a Nostr secret key
-// In production, you should use a proper cryptographic library
-function generateNostrSecretKey(): string {
-  // This is a placeholder implementation
-  // In reality, you should use a proper cryptographic library to generate keys
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  
-  // Convert to hex and create a mock nsec1 key
-  // This is not a real nsec1 key - you should use proper nostr-tools
-  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
-  return `nsec1${hex}`;
 } 

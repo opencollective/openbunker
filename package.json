@@ -12,6 +12,7 @@
     "dev:all": "concurrently \"npm run nostr-listener\" \"npm run dev\""
   },
   "dependencies": {
+    "@prisma/client": "^6.10.1",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
@@ -32,6 +33,7 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
+    "prisma": "^6.10.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { SimplePool, Event, Filter } from 'nostr-tools/pool';
+import { SimplePool, Event, Filter } from 'nostr-tools';
 
 interface NostrContextType {
   isConnected: boolean;
@@ -12,6 +12,12 @@ interface NostrContextType {
   error: string | null;
 }
 
+const relays = [
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://relay.snort.social',
+  'wss://nostr.wine'
+];
 const NostrContext = createContext<NostrContextType | undefined>(undefined);
 
 export function NostrProvider({ children }: { children: React.ReactNode }) {
@@ -40,7 +46,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       if (pool) {
-        pool.close();
+        pool.close(relays);
       }
     };
   }, []);
@@ -48,13 +54,6 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   // Subscribe to events
   const subscribeToEvents = useCallback((filter: Filter) => {
     if (!pool) return;
-
-    const relays = [
-      'wss://relay.damus.io',
-      'wss://nos.lol',
-      'wss://relay.snort.social',
-      'wss://nostr.wine'
-    ];
 
     try {
       const sub = pool.subscribe(relays, filter, {
