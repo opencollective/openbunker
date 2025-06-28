@@ -1,52 +1,9 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
-import { useNostr } from '@/contexts/NostrContext';
-import LoginForm from '@/components/LoginForm';
-import UserProfile from '@/components/UserProfile';
-import NostrEvents from '@/components/NostrEvents';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import UserProfile from '@/components/UserProfile';
 
 export default function Home() {
-  const { user, loading } = useAuth();
-  const { isConnected: nostrConnected, subscribeToEvents, events } = useNostr();
-  const router = useRouter();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!user && !loading) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-  // Subscribe to Nostr events when user is authenticated
-  useEffect(() => {
-    if (user && nostrConnected) {
-      // Subscribe to kind 24450 events (community onboarding events)
-      subscribeToEvents({
-        kinds: [24450],
-        // You can add specific pubkeys here if needed
-        // p: [user.nostr_pubkey]
-      });
-    }
-  }, [user, nostrConnected, subscribeToEvents]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // Will redirect
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-purple-100">
@@ -59,7 +16,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            A Discord-like login app for onboarding members to Nostr communities.
+            An example app that establishes remote signing to Nostr via social sign in.
             Experience seamless authentication and real-time Nostr relay listening.
           </p>
         </div>
@@ -87,17 +44,6 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                  Nostr Events
-                </h2>
-                <p className="text-gray-600">
-                  Real-time events from Nostr relays (kind 24450)
-                </p>
-              </div>
-              <NostrEvents />
-            </div>
           </div>
         </div>
 

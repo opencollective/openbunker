@@ -11,38 +11,7 @@ export default function OpenBunkerLogin() {
   const { authenticateWithOpenBunker, checkOpenBunkerCallback } = useAuth();
   const router = useRouter();
 
-  // Set up message listener for popup communication
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data.type === 'openbunker-auth-success') {
-        console.log('Received auth success message from popup:', event.data);
-        handleOpenBunkerSuccess(event.data.secretKey);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, []);
-
-  // Check for OpenBunker callback
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const secretKey = urlParams.get('secret_key');
-    const error = urlParams.get('error');
-    console.log('handleOpenBunkerSuccess', secretKey, error);
-    if (secretKey) {
-      handleOpenBunkerSuccess(secretKey);
-    } else if (error) {
-      setError('OpenBunker authentication failed. Please try again.');
-    }
-  }, []);
-
-  const handleOpenBunkerSuccess = async (secretKey: string) => {
+  const handleOpenBunkerAuthSuccess = async (secretKey: string) => {
     setLoading(true);
     setError('');
 
@@ -82,29 +51,7 @@ export default function OpenBunkerLogin() {
 
     try {
       const authUrl = await authenticateWithOpenBunker();
-      
-      // Open popup window (both development and production)
-      const popupWindow = window.open(
-        authUrl,
-        'openbunker-auth',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
-      );
-
-      if (popupWindow) {
-        setPopup(popupWindow);
-
-        // Check if popup is closed
-        const checkClosed = setInterval(() => {
-          if (popupWindow.closed) {
-            clearInterval(checkClosed);
-            setPopup(null);
-            setLoading(false);
-          }
-        }, 1000);
-      } else {
-        setError('Popup blocked. Please allow popups and try again.');
-        setLoading(false);
-      }
+      console.log('authUrl', authUrl);
     } catch (err) {
       setError('Failed to start OpenBunker authentication. Please try again.');
       setLoading(false);

@@ -1,23 +1,15 @@
 'use client';
 
+import { createClient } from '@/lib/supabase';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-interface User {
-  id: string;
-  email?: string;
-  name?: string;
-  avatar?: string;
-  discord_id?: string;
-  nostr_pubkey?: string;
-  nostr_secret_key?: string;
-}
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  currentSession: Session | null;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  authenticateWithSecretKey: (secretKey: string) => Promise<void>;
   authenticateWithOpenBunker: () => Promise<string>;
   checkOpenBunkerCallback: (secretKey: string) => Promise<void>;
 }
@@ -27,25 +19,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const supabase = createClient()
 
   useEffect(() => {
-    // Check for existing session
-    const checkSession = async () => {
-      try {
-        const session = localStorage.getItem('openbunker_session');
-        if (session) {
-          const userData = JSON.parse(session);
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      setCurrentSession(session)
+      setLoading(false)
+    }
 
-    checkSession();
-  }, []);
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null)
+        setCurrentSession(session)
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [supabase.auth])
 
   const signIn = async (email: string) => {
     try {
@@ -72,48 +70,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const authenticateWithSecretKey = async (secretKey: string) => {
-    try {
-      setLoading(true);
-      
-      // Validate the secret key format (basic validation)
-      if (!secretKey.startsWith('nsec1')) {
-        throw new Error('Invalid secret key format');
-      }
-
-      // Generate public key from secret key (you might want to use nostr-tools here)
-      // For now, we'll create a simple user object
-      const userData: User = {
-        id: `nostr_${Date.now()}`,
-        nostr_secret_key: secretKey,
-        nostr_pubkey: 'npub1...', // This should be derived from the secret key
-      };
-
-      setUser(userData);
-      localStorage.setItem('openbunker_session', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Secret key authentication error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const authenticateWithOpenBunker = async (): Promise<string> => {
     try {
       setLoading(true);
       
-      // Get OpenBunker authentication URL
-      const response = await fetch('/api/auth/openbunker-url', {
-        method: 'GET',
+      const { error, data } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo: 'https://vwlhjfwabbobhbopmmxa.supabase.co/auth/v1/callback',
+          // skipBrowserRedirect: true
+        },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get OpenBunker authentication URL');
-      }
+      // Validate redirect URL
+      const redirectUrl = data?.url;
+      const allowedDomains = [
+        'localhost:3000',
+        'vwlhjfwabbobhbopmmxa.supabase.co'
+      ];
 
-      const { authUrl } = await response.json();
-      return authUrl;
+      const isValidRedirect = allowedDomains.some(domain => 
+        redirectUrl?.includes(domain)
+      );
+      
+      if (!isValidRedirect) {
+        throw new Error('Invalid redirect URL');
+      }
+      console.log('data', data);
+      
+      if (error || !data?.url) {
+        console.error('Error signing in with Discord:', error?.message)
+      }
+      console.log('redirecting to', data?.url)
+      return data?.url || '';
     } catch (error) {
       console.error('OpenBunker authentication error:', error);
       throw error;
@@ -131,15 +120,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid secret key format');
       }
 
-      // Create user object with the received secret key
-      const userData: User = {
-        id: `openbunker_${Date.now()}`,
-        nostr_secret_key: secretKey,
-        nostr_pubkey: 'npub1...', // This should be derived from the secret key
-      };
-
-      setUser(userData);
-      localStorage.setItem('openbunker_session', JSON.stringify(userData));
+      // For now, we'll create a custom user object
+      // In a real implementation, you might want to store this in a separate table
+      // or handle it differently since Supabase auth doesn't directly support Nostr keys
+      console.log('Nostr secret key received:', secretKey);
+      
+      // You could store additional user data in a separate table
+      // or handle Nostr authentication separately from Supabase auth
+      
     } catch (error) {
       console.error('OpenBunker callback error:', error);
       throw error;
@@ -151,8 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setLoading(true);
-      localStorage.removeItem('openbunker_session');
-      setUser(null);
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error signing out:', error.message)
+      }
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -163,9 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextType = {
     user,
     loading,
+    currentSession,
     signIn,
     signOut,
-    authenticateWithSecretKey,
     authenticateWithOpenBunker,
     checkOpenBunkerCallback,
   };

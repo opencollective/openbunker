@@ -1,6 +1,6 @@
 'use client';
 
-import { useNostr } from '@/contexts/NostrContext';
+import { useNostr } from '@/app/(example)/_context/NostrContext';
 
 export default function NostrEvents() {
   const { events, isConnected, error, clearEvents } = useNostr();

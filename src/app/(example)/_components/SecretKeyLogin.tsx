@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNostr } from '@/app/(example)/_context/NostrContext';
 import { useRouter } from 'next/navigation';
 
 export default function SecretKeyLogin() {
   const [secretKey, setSecretKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { authenticateWithSecretKey } = useAuth();
+
+  const { setLocalSecretKey } = useNostr();
+
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +21,7 @@ export default function SecretKeyLogin() {
     setError('');
 
     try {
-      await authenticateWithSecretKey(secretKey);
+      setLocalSecretKey(secretKey as unknown as Uint8Array);
       router.push('/');
     } catch (err) {
       setError('Invalid secret key. Please check your key and try again.');

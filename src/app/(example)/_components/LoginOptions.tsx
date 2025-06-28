@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import SecretKeyLogin from '@/components/SecretKeyLogin';
-import OpenBunkerLogin from '@/components/OpenBunkerLogin';
+import SecretKeyLogin from '@/app/(example)/_components/SecretKeyLogin';
+import { useNostr } from '@/app/(example)/_context/NostrContext';
+import { generateSecretKey } from 'nostr-tools';
+
 
 export default function LoginOptions() {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [popup, setPopup] = useState<Window | null>(null);
-  const { user, checkOpenBunkerCallback } = useAuth();
+  const { setBunkerConnectionToken, setLocalSecretKey } = useNostr();
   const router = useRouter();
 
   // Set up the callback function for the popup
@@ -22,8 +23,7 @@ export default function LoginOptions() {
     // Set up message listener as fallback
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      console.log('handleMessage', event);
-      
+      console.log('handleMessage', event.data);
       if (event.data.type === 'openbunker-auth-success') {
         handleOpenBunkerSuccess(event.data.secretKey);
       }
@@ -38,15 +38,19 @@ export default function LoginOptions() {
     };
   }, []);
 
-  const handleOpenBunkerSuccess = async (secretKey: string) => {
+  const handleOpenBunkerSuccess = async (bunkerConnectionToken: string) => {
     try {
-      // Use the auth context to handle the secret key
-      await checkOpenBunkerCallback(secretKey);
-      router.push('/');
+      const sk = generateSecretKey();
+
+      setBunkerConnectionToken(bunkerConnectionToken);
+      setLocalSecretKey(sk);
+      console.log('pushing to /example');
+      router.push('/example');
     } catch (err) {
       console.error('Failed to complete OpenBunker authentication:', err);
     }
   };
+
 
   const handleOpenBunkerPopup = () => {
     console.log('handleOpenBunkerPopup');
@@ -70,10 +74,6 @@ export default function LoginOptions() {
       }, 1000);
     }
   };
-
-  if (user) {
-    return null;
-  }
 
   if (showSecretKey) {
     return (

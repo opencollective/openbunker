@@ -4,6 +4,11 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { SimplePool, Event, Filter } from 'nostr-tools';
 
 interface NostrContextType {
+  localSecretKey: Uint8Array | null;
+  bunkerConnectionToken: string | null;
+  setBunkerConnectionToken: (token: string) => void;
+  setLocalSecretKey: (sk: Uint8Array) => void;
+
   isConnected: boolean;
   events: Event[];
   sendEvent: (event: Event) => void;
@@ -25,6 +30,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [localSecretKey, setLocalSecretKey] = useState<Uint8Array | null>(null);
+  const [bunkerConnectionToken, setBunkerConnectionToken] = useState<string | null>(null);
 
   // Initialize Nostr pool
   useEffect(() => {
@@ -106,7 +113,11 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     sendEvent,
     subscribeToEvents,
     clearEvents,
-    error
+    error,
+    localSecretKey,
+    bunkerConnectionToken,
+    setBunkerConnectionToken,
+    setLocalSecretKey
   };
 
   return (

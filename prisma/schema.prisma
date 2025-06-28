@@ -15,14 +15,15 @@ datasource db {
 
 model Keys {
   npub     String @id
-  jsonData String
+  nip05    String?
   name     String?
   avatar   String?
   relays   String[]
   enckey   String
+  // In Noauth, this is an Augmented Nostr Event with an info field representing the profile
   profile  Json?
-  ncryptsec String?
-  localKey Json?
+  ncryptsec String?  
+  localKey String?
   email    String?
 }
 
@@ -30,8 +31,14 @@ model Apps {
   appNpub   String
   npub      String
   name      String
+  icon      String
+  url       String
   timestamp BigInt
-  jsonData  String
+  updateTimestamp BigInt
+  permUpdateTimestamp BigInt
+  userAgent String?
+  token String?
+  subNpub String?
 
   @@id(name: "appId", [appNpub, npub])
 }
@@ -51,7 +58,11 @@ model Pending {
   appNpub   String
   timestamp BigInt
   method    String
-  jsonData  String
+  params    String
+  appUrl    String?
+  appName   String?
+  appIcon   String?
+  subNpub   String?
 }
 
 model History {
@@ -61,7 +72,7 @@ model History {
   timestamp BigInt
   method    String
   allowed   Boolean?
-  jsonData  String
+  params    String?
   result    String?
 
   @@index([npub, appNpub])
