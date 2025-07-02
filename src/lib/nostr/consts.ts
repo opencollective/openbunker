@@ -1,0 +1,1 @@
+export const NIP46_RELAYS = process.env.NIP46_RELAYS || 'wss://relay.nsec.app';

@@ -13,6 +13,23 @@ datasource db {
   url       = env("DATABASE_URL")
 }
 
+// New model to associate Nostr keys with Supabase users
+model UserKeys {
+  id          String   @id @default(cuid())
+  userId      String   // Supabase user ID
+  npub        String   // Nostr public key
+  name        String?  // Display name for the key
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Reference to the Keys table
+  key         Keys     @relation(fields: [npub], references: [npub], onDelete: Cascade)
+
+  @@unique([userId, npub])
+  @@index([userId])
+}
+
 model Keys {
   npub     String @id
   nip05    String?
@@ -25,6 +42,10 @@ model Keys {
   ncryptsec String?  
   localKey String?
   email    String?
+
+  // Relation to UserKeys
+  userKeys UserKeys[]
+  @@index([npub])
 }
 
 model Apps {

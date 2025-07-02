@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import UserProfile from '@/components/UserProfile';
+import UserKeys from '@/components/UserKeys';
 
 export default function Home() {
 
@@ -21,7 +22,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="text-center">
@@ -44,6 +45,17 @@ export default function Home() {
               </div>
             </div>
             
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                  Your Nostr Keys
+                </h2>
+                <p className="text-gray-600">
+                  Manage your Nostr identities and keys for secure interactions.
+                </p>
+              </div>
+              <UserKeys />
+            </div>
           </div>
         </div>
 

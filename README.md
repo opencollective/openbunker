@@ -310,6 +310,7 @@ WS_PORT=3001
 NEXT_PUBLIC_WS_URL=wss://your-domain.com
 NEXT_PUBLIC_NOSTR_RELAYS=wss://relay.damus.io,wss://nos.lol
 NODE_ENV=production
+NIP46_RELAYS=...
 ```
 
 ### Build and Deploy
