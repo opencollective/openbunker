@@ -18,6 +18,8 @@ interface UseConnectionTokensReturn {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  createToken: (subNpub?: string) => Promise<ConnectionToken | null>;
+  deleteToken: (token: string) => Promise<boolean>;
 }
 
 export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
@@ -51,6 +53,62 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
     }
   };
 
+  const createToken = async (subNpub?: string): Promise<ConnectionToken | null> => {
+    if (!user || !npub) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`/api/keys/${npub}/connection-tokens`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subNpub }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create connection token');
+      }
+
+      const data = await response.json();
+      
+      // Add the new token to the list
+      setTokens(prev => [data.token, ...prev]);
+      
+      return data.token;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create connection token');
+      console.error('Error creating connection token:', err);
+      return null;
+    }
+  };
+
+  const deleteToken = async (token: string): Promise<boolean> => {
+    if (!user || !npub) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(`/api/keys/${npub}/connection-tokens?token=${encodeURIComponent(token)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete connection token');
+      }
+
+      // Remove the token from the list
+      setTokens(prev => prev.filter(t => t.token !== token));
+      
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete connection token');
+      console.error('Error deleting connection token:', err);
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchTokens();
   }, [user, npub]);
@@ -60,5 +118,7 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
     loading,
     error,
     refetch: fetchTokens,
+    createToken,
+    deleteToken,
   };
 } 

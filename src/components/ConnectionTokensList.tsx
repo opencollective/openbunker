@@ -8,8 +8,10 @@ interface ConnectionTokensListProps {
 }
 
 export default function ConnectionTokensList({ npub }: ConnectionTokensListProps) {
-  const { tokens, loading, error, refetch } = useConnectionTokens(npub);
+  const { tokens, loading, error, refetch, createToken, deleteToken } = useConnectionTokens(npub);
   const [copied, setCopied] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const copyToClipboard = async (text: string, tokenId: string) => {
     try {
@@ -43,6 +45,37 @@ export default function ConnectionTokensList({ npub }: ConnectionTokensListProps
       return `${hours}h ${minutes}m remaining`;
     }
     return `${minutes}m remaining`;
+  };
+
+  const handleCreateToken = async () => {
+    setCreating(true);
+    try {
+      const newToken = await createToken();
+      if (newToken) {
+        // Token created successfully
+        console.log('New token created:', newToken);
+      }
+    } catch (error) {
+      console.error('Failed to create token:', error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDeleteToken = async (token: string) => {
+    if (confirm('Are you sure you want to delete this connection token? This action cannot be undone.')) {
+      setDeleting(token);
+      try {
+        const success = await deleteToken(token);
+        if (success) {
+          console.log('Token deleted successfully');
+        }
+      } catch (error) {
+        console.error('Failed to delete token:', error);
+      } finally {
+        setDeleting(null);
+      }
+    }
   };
 
   if (loading) {
@@ -92,7 +125,29 @@ export default function ConnectionTokensList({ npub }: ConnectionTokensListProps
             </svg>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Connection Tokens</h3>
-          <p className="text-gray-600">No connection tokens found for this key.</p>
+          <p className="text-gray-600 mb-4">Connection tokens allow apps to securely connect to your Nostr key using NIP-46.</p>
+          <button
+            onClick={handleCreateToken}
+            disabled={creating}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {creating ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating...
+              </>
+            ) : (
+              <>
+                <svg className="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Create Your First Token
+              </>
+            )}
+          </button>
         </div>
       </div>
     );
@@ -102,12 +157,36 @@ export default function ConnectionTokensList({ npub }: ConnectionTokensListProps
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-semibold text-gray-900">Connection Tokens</h3>
-        <button
-          onClick={refetch}
-          className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleCreateToken}
+            disabled={creating}
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {creating ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating...
+              </>
+            ) : (
+              <>
+                <svg className="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Create Token
+              </>
+            )}
+          </button>
+          <button
+            onClick={refetch}
+            className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -159,6 +238,24 @@ export default function ConnectionTokensList({ npub }: ConnectionTokensListProps
                   ) : (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => handleDeleteToken(token.token)}
+                  disabled={deleting === token.token || token.isExpired}
+                  className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete token"
+                >
+                  {deleting === token.token ? (
+                    <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   )}
                 </button>

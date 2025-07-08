@@ -9,12 +9,14 @@
     "lint": "next lint",
     "websocket": "node server/websocket-server.js",
     "nostr-listener": "node server/nostr-listener.js",
+    "bunker-client": "tsx server/bunker-client.ts",
     "db:generate": "dotenv -e .env.local -- prisma generate",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "dev:all": "concurrently \"npm run nostr-listener\" \"npm run dev\""
   },
   "dependencies": {
+    "@nostr-dev-kit/ndk": "^2.14.32",
     "@prisma/client": "^6.10.1",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
@@ -39,6 +41,7 @@
     "eslint-config-next": "15.3.4",
     "prisma": "^6.10.1",
     "tailwindcss": "^4",
+    "tsx": "^4.0.0",
     "typescript": "^5"
   }
 }
