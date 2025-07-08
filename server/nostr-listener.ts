@@ -19,7 +19,6 @@ console.log('Starting Nostr relay listener...');
 console.log(`Connecting to relays: ${relays.join(', ')}`);
 
 // Create signer first
-// npub1dzn2s0szxmdlnu8kzfrj6dx4natse4m08ud4n57d6lhe09882jmsrpxkhh
 // const signer = new NDKPrivateKeySigner(process.env.BUNKER_NSEC || '');
 const signer = new NDKPrivateKeySigner('nsec18u546xckjnj7kapgrvwk7ju4jy84vfpv5lusvcawg3t7h5ctvldqtcutet');
 console.log('signer', signer.pubkey);
@@ -37,27 +36,36 @@ const ndk = new NDK({
 const backend = new NDKNip46Backend(
   ndk,
   signer,
-  
   async (params) => {
-    console.log('Permission request:', params);
-    // Always allow for this example
     return true;
   },
-  relays,
 );
+
+ndk.connect().then(() => {
+  console.log('Connected to relays');
+});
 
 backend.start().then(() => {
   console.log('Backend started');
-  console.log('backend.localUser', backend.localUser?.pubkey);
+  // Handy copy-paste link for a client
+  const bunkerUri = `bunker://${backend.localUser?.pubkey}?relay=${encodeURIComponent(relays[0])}`;
+  console.log(`\nBunker URI (use this in your client):\n  ${bunkerUri}\n`);
+  
+  // Add debug logging for subscription
+  console.log('Backend subscription filter:', {
+    kinds: [24133],
+    '#p': [backend.localUser?.pubkey]
+  });
+  
 }).catch((error: any) => {
   console.error('Error starting backend:', error);
 });
 
-
-
 // Keep the process alive and show it's still running
 setInterval(() => {
+  // backend.ndk.
   console.log('Still listening...', new Date().toISOString());
+
 }, 30000); // Log every 30 seconds
 
 // Graceful shutdown
@@ -69,4 +77,4 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');
   process.exit(0);
-}); 
+});

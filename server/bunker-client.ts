@@ -11,7 +11,9 @@ function generatePrivateKey() {
     return randomBytes(32).toString('hex');
   }
 
-
+const relays = [
+    'wss://relay.damus.io',
+];
 // Function to prompt user for bunker connection string
 async function promptForBunkerConnection(): Promise<string> {
   const rl = readline.createInterface({
@@ -44,11 +46,11 @@ async function main() {
 
     // Create NDK instance
     const ndk = new NDK({
-      explicitRelayUrls: ['wss://relay.nsec.app'],
+      explicitRelayUrls: relays,
       netDebug: (msg: string, relay: NDKRelay, direction?: "send" | "recv") => {
         const hostname = new URL(relay.url).hostname;
         console.log(hostname, msg, direction);
-      }
+      },
     });
     // Generate a new local nsec for this session
     const localNsec = generatePrivateKey();
