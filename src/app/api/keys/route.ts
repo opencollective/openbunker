@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/db';
 import { generateSecretKey, getPublicKey } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
+import { bytesToHex } from '@noble/hashes/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,7 +65,8 @@ export async function POST(request: NextRequest) {
         relays: [],
         enckey: '',
         profile: undefined,
-        ncryptsec: undefined,
+        // Should this be encrypted
+        ncryptsec: bytesToHex(secretKey),
         localKey: undefined,
       },
     });
@@ -84,7 +86,6 @@ export async function POST(request: NextRequest) {
       key: {
         ...userKey,
         key: key,
-        secretKey: nsec, // Only return the secret key on creation
       },
     });
   } catch (error) {

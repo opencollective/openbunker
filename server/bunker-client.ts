@@ -29,13 +29,13 @@ async function promptForBunkerConnection(): Promise<string> {
   });
 }
 
+
 async function main() {
   try {
     console.log('Starting Bunker Client...\n');
 
     // Get bunker connection string from user
-    // const signerConnectionString = await promptForBunkerConnection();
-    const signerConnectionString = "bunker://68a6a83e0236dbf9f0f612472d34d59f570cd76f3f1b59d3cdd7ef9794e754b7?relay=wss%3A%2F%2Frelay.nsec.app";
+    const signerConnectionString = await promptForBunkerConnection();
     
     if (!signerConnectionString.startsWith('bunker://')) {
       throw new Error('Invalid bunker connection string. Must start with "bunker://"');
@@ -68,7 +68,6 @@ async function main() {
     signer.on('error', (error) => {
       console.error('Signer error:', error);
     });
-    console.log('signer.bunkerPubkey', signer.bunkerPubkey);
     const user = await signer.blockUntilReady();
     
     console.log('\n🎉 Successfully connected to bunker!');

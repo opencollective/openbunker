@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useConnectionTokens } from '@/hooks/useConnectionTokens';
+import { nip19 } from 'nostr-tools';
 
 interface ConnectionTokensListProps {
   npub: string;
@@ -12,6 +13,23 @@ export default function ConnectionTokensList({ npub }: ConnectionTokensListProps
   const [copied, setCopied] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  const buildBunkerUrl = (secret: string) => {
+    const relays = process.env.NEXT_PUBLIC_BUNKER_RELAYS;
+    
+    const pubkey = nip19.decode(npub).data;
+    
+    let url = `bunker://${pubkey}?secret=${secret}`;
+    
+    if (relays) {
+      const relayList = relays.split(',').map(r => r.trim());
+      relayList.forEach(relay => {
+        url += `&relay=${encodeURIComponent(relay)}`;
+      });
+    }
+    
+    return url;
+  };
 
   const copyToClipboard = async (text: string, tokenId: string) => {
     try {
@@ -227,9 +245,9 @@ export default function ConnectionTokensList({ npub }: ConnectionTokensListProps
               
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => copyToClipboard(token.token, token.token)}
+                  onClick={() => copyToClipboard(buildBunkerUrl(token.token), token.token)}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Copy token"
+                  title="Copy bunker:// URL"
                 >
                   {copied === token.token ? (
                     <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
