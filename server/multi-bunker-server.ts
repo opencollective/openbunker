@@ -195,7 +195,7 @@ class MultiBunkerServer {
         if (hasValidTokens) {
           console.log(`Key ${key.npub} has valid connection tokens - will start bunker`);
         } else {
-          console.log(`Key ${key.npub} has no valid connection tokens - skipping`);
+          console.log(`Key ${key.npub} has no valid connection tokens - will start bunker anyway`);
         }
       }
 
@@ -213,12 +213,8 @@ class MultiBunkerServer {
     console.log('Starting bunker instances...');
     
     for (const key of this.keys) {
-      const tokens = this.tokensByNpub.get(key.npub);
+      const tokens = this.tokensByNpub.get(key.npub) || [];
       console.log('tokens', tokens);
-      if (!tokens || tokens.length === 0) {
-        console.log(`Skipping key ${key.npub} - no valid tokens`);
-        continue;
-      }
 
       try {
         await this.startBunkerForKey(key, tokens);
@@ -289,11 +285,11 @@ class MultiBunkerServer {
     );
 
     if (validTokens.length === 0) {
-      console.log(`No valid tokens found for ${npub} - rejecting connection`);
-      return false;
+      console.log(`No valid tokens found for ${npub} - accepting connection anyway (tokens not required)`);
+      return true;
     }
 
-    // For now, accept any connection with valid tokens
+    // Accept any connection with valid tokens
     // You can add more sophisticated validation here
     console.log(`Valid tokens found for ${npub} - accepting connection`);
     return true;
@@ -315,10 +311,10 @@ class MultiBunkerServer {
   private async updateBunkerInstances() {
     // Check for new keys that need bunkers
     for (const key of this.keys) {
-      const tokens = this.tokensByNpub.get(key.npub);
+      const tokens = this.tokensByNpub.get(key.npub) || [];
       const hasBunker = this.bunkerInstances.has(key.npub);
       
-      if (tokens && tokens.length > 0 && !hasBunker) {
+      if (!hasBunker) {
         console.log(`Starting new bunker for ${key.npub}`);
         try {
           await this.startBunkerForKey(key, tokens);
@@ -328,14 +324,8 @@ class MultiBunkerServer {
       }
     }
 
-    // Check for bunkers that should be stopped (no valid tokens)
-    for (const [npub, instance] of this.bunkerInstances) {
-      const tokens = this.tokensByNpub.get(npub);
-      if (!tokens || tokens.length === 0) {
-        console.log(`Stopping bunker for ${npub} - no valid tokens`);
-        await this.stopBunker(npub);
-      }
-    }
+    // Note: We no longer stop bunkers when they have no tokens
+    // All bunkers run regardless of token status
   }
 
   private async stopBunker(npub: string) {

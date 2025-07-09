@@ -48,7 +48,7 @@ export default function Home() {
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
             Welcome to{' '}
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              OpenBunker
+              OpenBunker Example App
             </span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">

@@ -2,12 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { SimplePool, Event, Filter } from 'nostr-tools';
+import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46'
 
 interface NostrContextType {
   localSecretKey: Uint8Array | null;
   bunkerConnectionToken: string | null;
   setBunkerConnectionToken: (token: string) => void;
   setLocalSecretKey: (sk: Uint8Array) => void;
+  handleBunkerConnectionToken: (bunkerConnectionToken: string, localSecretKey: Uint8Array) => void;
 
   isConnected: boolean;
   events: Event[];
@@ -58,6 +60,29 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const handleBunkerConnectionToken = useCallback(async (newBunkerConnectionToken: string, newLocalSecretKey: Uint8Array) => {
+    setBunkerConnectionToken(newBunkerConnectionToken);
+    setLocalSecretKey(newLocalSecretKey);
+    // parse a bunker URI
+    const bunkerPointer = await parseBunkerInput(newBunkerConnectionToken)
+    if (!bunkerPointer) {
+      throw new Error('Invalid bunker input:' + newBunkerConnectionToken)
+    }
+    let newPool = pool;
+    if (newPool === null) {
+      newPool = new SimplePool();
+      setPool(newPool);
+      console.log('Pool initialized')
+      setIsConnected(true);
+      setError(null);
+    }
+    console.log('Bunker pointer:', bunkerPointer);
+    console.log(bunkerPointer.relays);
+    const bunker = new BunkerSigner(newLocalSecretKey, bunkerPointer, { pool: newPool })
+    await bunker.connect();
+    console.log('Bunker connected');
+    setIsConnected(true);
+  }, []);
   // Subscribe to events
   const subscribeToEvents = useCallback((filter: Filter) => {
     if (!pool) return;
@@ -117,7 +142,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     localSecretKey,
     bunkerConnectionToken,
     setBunkerConnectionToken,
-    setLocalSecretKey
+    setLocalSecretKey,
+    handleBunkerConnectionToken
   };
 
   return (

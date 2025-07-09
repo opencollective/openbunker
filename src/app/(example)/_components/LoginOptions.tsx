@@ -10,7 +10,7 @@ import { generateSecretKey } from 'nostr-tools';
 export default function LoginOptions() {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [popup, setPopup] = useState<Window | null>(null);
-  const { setBunkerConnectionToken, setLocalSecretKey } = useNostr();
+  const { handleBunkerConnectionToken } = useNostr();
   const router = useRouter();
 
   // Set up the callback function for the popup
@@ -41,10 +41,7 @@ export default function LoginOptions() {
   const handleOpenBunkerSuccess = async (bunkerConnectionToken: string) => {
     try {
       const sk = generateSecretKey();
-
-      setBunkerConnectionToken(bunkerConnectionToken);
-      setLocalSecretKey(sk);
-      console.log('pushing to /example');
+      handleBunkerConnectionToken(bunkerConnectionToken, sk);
       router.push('/example');
     } catch (err) {
       console.error('Failed to complete OpenBunker authentication:', err);
