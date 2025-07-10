@@ -14,7 +14,7 @@
     "db:generate": "dotenv -e .env.local -- prisma generate",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
-    "dev:all": "concurrently \"npm run nostr-listener\" \"npm run dev\""
+    "dev:all": "concurrently \"npm run multi-bunker\" \"npm run dev\""
   },
   "dependencies": {
     "@nostr-dev-kit/ndk": "^2.14.32",

@@ -1,36 +1,36 @@
 # OpenBunker
 
-A Discord-like login app for onboarding members to Nostr communities with real-time relay listening capabilities.
+OpenBunker is an authentication platform that helps manage Nostr keys through social login integration. Currently supporting Discord OAuth, it provides a custodial solution for users to authenticate and manage their Nostr identities.
 
 ## Features
 
-- **Multiple Authentication Methods**: 
-  - Email-based authentication with 6-digit verification codes
-  - Direct Nostr secret key authentication
-  - Discord OAuth authentication via OpenBunker
-- **Nostr Integration**: Real-time connection to Nostr relays
-- **WebSocket Server**: Long-running process for real-time communication
-- **Modern UI**: Beautiful Discord-inspired interface with Tailwind CSS
-- **TypeScript**: Full type safety throughout the application
-- **Application Example**: Demo page showing authentication integration
+- **Social Authentication**: Sign in with Discord (more social platforms coming soon)
+- **Custodial Key Management**: Secure storage and management of Nostr private keys
+- **Bunker Server**: NIP-46 compliant server for remote signing and authentication
+- **Example Application**: Demo application showing platform integration
+- **Modern UI**: Clean, responsive interface built with Next.js and Tailwind CSS
 
 ## Architecture
 
-The application consists of two main parts:
+OpenBunker is a **custodial application**, meaning private keys are stored in a database. The platform consists of:
 
-1. **Next.js Frontend**: React-based web application with authentication and Nostr event display
-2. **WebSocket Server**: Long-running Node.js process that handles real-time communication and Nostr relay connections
+### Components
+
+- **Next.js Application**: Main web interface with Prisma ORM
+- **Supabase**: PostgreSQL database and social authentication provider
+- **Bunker Server**: NIP-46 compliant server that listens on authentication relays and handles remote signing requests
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+
+- npm
+- Supabase account and project
 
 ### Installation
 
-1. Install dependencies:
+1. Clone the repository and install dependencies:
 ```bash
 npm install
 ```
@@ -38,286 +38,142 @@ npm install
 2. Set up environment variables:
 ```bash
 # Create .env.local file
-WS_PORT=3001
-NEXT_PUBLIC_WS_URL=ws://localhost:3001
-NEXT_PUBLIC_NOSTR_RELAYS=wss://relay.damus.io,wss://nos.lol,wss://relay.snort.social,wss://nostr.wine
-NODE_ENV=development
+DATABASE_URL="your-supabase-database-url"
+NEXT_PUBLIC_SUPABASE_URL="your-supabase-project-url"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
 
-# For Discord OAuth (optional)
-NEXT_PUBLIC_DISCORD_CLIENT_ID=your-discord-client-id
-DISCORD_CLIENT_ID=your-discord-client-id
-DISCORD_CLIENT_SECRET=your-discord-client-secret
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# Discord OAuth (required)
+NEXT_PUBLIC_DISCORD_CLIENT_ID="your-discord-client-id"
+DISCORD_CLIENT_SECRET="your-discord-client-secret"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Bunker server configuration
+BUNKER_RELAY_URL="wss://your-bunker-relay.com"
+BUNKER_PRIVATE_KEY="your-bunker-private-key"
 ```
 
-3. Run the development servers:
+3. Set up the database:
 ```bash
-# Run both Next.js and WebSocket servers
-npm run dev:all
-
-# Or run them separately:
-npm run websocket  # WebSocket server on port 3001
-npm run dev        # Next.js app on port 3000
+npx prisma generate
+npx prisma db push
 ```
 
-### Development
+4. Run the development server:
+```bash
+npm run dev
+```
 
-- **Frontend**: http://localhost:3000
-- **Login Page**: http://localhost:3000/login
-- **Example Page**: http://localhost:3000/example
-- **WebSocket Server**: ws://localhost:3001
-- **API Routes**: http://localhost:3000/api/auth/*
+## For Client Applications
 
-## Authentication Methods
+To integrate OpenBunker into your application:
 
-### 1. Email Authentication
-Traditional email-based authentication with 6-digit verification codes.
+### 1. Popup Window Integration
 
-### 2. Secret Key Authentication
-Direct authentication using existing Nostr secret keys (nsec1...). Keys are stored locally and used to sign events.
+Your client application should open a popup window to the OpenBunker authentication flow and expose an `openBunkerCallback` function to handle the authentication response.
 
-### 3. OpenBunker Authentication
-Discord OAuth flow that generates new Nostr keys for users. Perfect for onboarding new users to Nostr.
+### 2. Bunker Signer Integration
 
-## Pages
+We recommend using NDK's bunker signer with the bunker connection token for secure remote signing:
 
-- **Home Page** (`/`): Main dashboard with Nostr events and user profile
-- **Login Page** (`/login`): Authentication options and forms
-- **Example Page** (`/example`): Application example showing integration
-- **OpenBunker Auth** (`/openbunker-auth`): Discord OAuth flow handler
+```typescript
+import { NDK } from '@nostr-dev-kit/ndk';
+import { NDKBunkerSigner } from '@nostr-dev-kit/ndk';
 
-## Nostr Integration
+// Initialize bunker signer with connection token
+const bunkerSigner = new NDKBunkerSigner(connectionToken);
+const ndk = new NDK({ signer: bunkerSigner });
+```
 
-The app listens to Nostr relays for events of kind 24450 (community onboarding events). The WebSocket server acts as a bridge between the frontend and Nostr relays.
+### 3. Authentication Flow
 
-### Relay Configuration
+1. User clicks "Sign in with OpenBunker" in your app
+2. Popup opens to OpenBunker authentication page
+3. User authenticates with Discord
+4. OpenBunker generates Nostr keys and returns connection token
+5. Your app receives the token via `openBunkerCallback`
+6. Use the token with NDK bunker signer for remote signing
 
-Default relays:
-- wss://relay.damus.io
-- wss://nos.lol  
-- wss://relay.snort.social
-- wss://nostr.wine
+## Example Application
 
-### Event Types
+The example application in the `(example)` folder demonstrates how to integrate with OpenBunker. It allows users to:
 
-- **Kind 24450**: Community onboarding events
-- **Real-time**: Events are displayed as they arrive from relays
+- Query and edit user metadata
+- Demonstrate the complete authentication flow
+- Show proper integration patterns
 
-## Authentication Flow
-
-### Email Authentication
-1. User enters email address
-2. System sends 6-digit verification code
-3. User enters verification code
-4. System validates code and creates user session
-5. User is authenticated and can view Nostr events
-
-### Secret Key Authentication
-1. User visits `/login`
-2. Clicks "Authenticate with Secret Key"
-3. Enters their nsec1 secret key
-4. Key is validated and stored locally
-5. User is redirected to home page
-
-### OpenBunker Authentication
-1. User visits `/login`
-2. Clicks "Authenticate with OpenBunker"
-3. Popup opens with Discord OAuth
-4. User authorizes with Discord
-5. Discord callback generates new Nostr key
-6. User is redirected back to login with the new key
-7. Key is stored and user is redirected to home page
+To run the example:
+```bash
+npm run dev
+# Navigate to http://localhost:3000/example
+```
 
 ## API Endpoints
 
-### POST /api/auth/send-code
-Send verification code to email address.
+### Authentication
 
-**Request:**
-```json
-{
-  "email": "user@example.com"
-}
-```
+- `POST /api/auth/discord-callback` - Handle Discord OAuth callback
+- `GET /api/auth/openbunker-url` - Get authentication URL
+- `POST /api/auth/verify-session` - Verify user session
 
-**Response:**
-```json
-{
-  "message": "Verification code sent successfully",
-  "code": "123456" // Only in development
-}
-```
+## Security Considerations
 
-### POST /api/auth/verify-code
-Verify the 6-digit code and authenticate user.
+⚠️ **Important**: This is a custodial application. Private keys are stored in the database.
 
-**Request:**
-```json
-{
-  "email": "user@example.com",
-  "code": "123456"
-}
-```
+### Current Security Status
 
-**Response:**
-```json
-{
-  "id": "user_1234567890",
-  "email": "user@example.com",
-  "name": "user",
-  "created_at": "2024-01-01T00:00:00.000Z",
-  "nostr_pubkey": "npub1..."
-}
-```
+- Private keys are stored in Supabase database
+- Additional encryption layer recommended for production
+- Connection token validation needs improvement
 
-### GET /api/auth/openbunker-url
-Get OpenBunker authentication URL for Discord OAuth.
+## TODO - Before Production
 
-**Response:**
-```json
-{
-  "authUrl": "http://localhost:3000/openbunker-auth"
-}
-```
+Before OpenBunker should be considered production-ready, the following issues need to be addressed:
 
-### POST /api/auth/discord-callback
-Handle Discord OAuth callback and generate Nostr key.
+### 1. Private Key Security
+- **Assessment Required**: Current security measures need thorough evaluation
+- **Additional Encryption**: Consider implementing additional encryption layers for stored private keys
+- **Key Rotation**: Implement secure key rotation mechanisms
 
-**Request:**
-```json
-{
-  "code": "discord_oauth_code"
-}
-```
+### 2. Authorization System
+- **Connection Token Validation**: Currently, the server authorizes every local key without proper connection token validation on first connection
+- **Session Management**: Improve session validation and token-based authentication
+- **Access Control**: Implement proper authorization checks for all bunker operations
 
-**Response:**
-```json
-{
-  "secretKey": "nsec1...",
-  "user": {
-    "id": "discord_user_id",
-    "username": "username",
-    "email": "user@example.com",
-    "avatar": "avatar_url"
-  }
-}
-```
+### 3. Additional Features
+- **Multi-Social Support**: Add support for additional social platforms (Twitter, GitHub, etc.)
+- **Audit Logging**: Add comprehensive audit trails for all operations
 
-## WebSocket Messages
+## Development
 
-### Client to Server
-
-**Subscribe to Nostr events:**
-```json
-{
-  "type": "subscribe_nostr",
-  "filter": {
-    "kinds": [24450],
-    "p": ["npub1..."]
-  }
-}
-```
-
-**Send Nostr event:**
-```json
-{
-  "type": "send_nostr_event",
-  "event": {
-    "kind": 24450,
-    "content": "Hello Nostr!",
-    "tags": []
-  }
-}
-```
-
-### Server to Client
-
-**Connection established:**
-```json
-{
-  "type": "connection",
-  "message": "Connected to OpenBunker WebSocket server",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "nostrRelays": ["wss://relay.damus.io", ...]
-}
-```
-
-**Nostr event received:**
-```json
-{
-  "type": "nostr_event",
-  "event": {
-    "id": "event_123",
-    "pubkey": "npub1...",
-    "created_at": 1704067200,
-    "kind": 24450,
-    "content": "Event content",
-    "sig": "signature"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-## Project Structure
+### Project Structure
 
 ```
 openbunker/
 ├── src/
 │   ├── app/
-│   │   ├── api/auth/
-│   │   │   ├── send-code/route.ts
-│   │   │   ├── verify-code/route.ts
-│   │   │   ├── openbunker-url/route.ts
-│   │   │   └── discord-callback/route.ts
-│   │   ├── login/
-│   │   │   └── page.tsx
-│   │   ├── example/
-│   │   │   └── page.tsx
-│   │   ├── openbunker-auth/
-│   │   │   └── page.tsx
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/
-│   │   ├── LoginForm.tsx
-│   │   ├── LoginOptions.tsx
-│   │   ├── SecretKeyLogin.tsx
-│   │   ├── OpenBunkerLogin.tsx
-│   │   ├── UserProfile.tsx
-│   │   └── NostrEvents.tsx
-│   └── contexts/
-│       ├── AuthContext.tsx
-│       └── NostrContext.tsx
-├── server/
-│   ├── websocket-server.js
-│   └── nostr-listener.js
-├── AUTHENTICATION.md
-└── README.md
+│   │   ├── (example)/          # Example application
+│   │   ├── (openbunker)/       # Main OpenBunker app
+│   │   ├── api/                # API routes
+│   │   └── globals.css
+│   ├── components/             # React components
+│   ├── contexts/               # React contexts
+│   ├── hooks/                  # Custom hooks
+│   ├── lib/                    # Utility functions
+│   └── types/                  # TypeScript types
+├── server/                     # Bunker server implementation
+├── prisma/                     # Database schema and migrations
+└── middleware.ts               # Next.js middleware
 ```
 
-## Documentation
-
-- [Authentication System Documentation](./AUTHENTICATION.md) - Detailed guide for the authentication system
-
-## Production Deployment
-
-### Environment Variables
-
-Set these in your production environment:
+### Running the Bunker Server
 
 ```bash
-WS_PORT=3001
-NEXT_PUBLIC_WS_URL=wss://your-domain.com
-NEXT_PUBLIC_NOSTR_RELAYS=wss://relay.damus.io,wss://nos.lol
-NODE_ENV=production
-NIP46_RELAYS=...
-```
+# Start the bunker server
+npm run multi-bunker
 
-### Build and Deploy
-
-```bash
-npm run build
-npm start
+# Or run both frontend and bunker server
+npm run dev:all
 ```
 
 ## Contributing
@@ -334,8 +190,5 @@ MIT License - see LICENSE file for details.
 
 ## Acknowledgments
 
-- Inspired by Discord's authentication flow
-- Built with Next.js 15 and Tailwind CSS
-- Nostr integration using nostr-tools
-- WebSocket server for real-time communication
-
+- NIP-46 compliant bunker server implementation
+- Inspired by https://github.com/nostrband/noauth
