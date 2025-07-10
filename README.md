@@ -139,6 +139,11 @@ npm run dev
 # Navigate to http://localhost:3000/example
 ```
 
+
+### Example NOSTR application demo
+
+[![OpenBunker Demo]()](https://www.loom.com/share/ce9a313d2ebf4feab10405da24969b59)
+
 ## API Endpoints
 
 ### Authentication
