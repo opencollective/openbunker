@@ -35,33 +35,64 @@ OpenBunker is a **custodial application**, meaning private keys are stored in a 
 npm install
 ```
 
-2. Set up environment variables:
+2. Set up Supabase project
+
+You will also need to set up a SQL user for the application. We use the prisma user in the example SQL below.
+
+```sql
+create user "prisma" with password 'your_password' bypassrls createdb;
+
+grant "prisma" to "postgres";
+
+-- Grant it necessary permissions over the relevant schemas (public)
+grant usage on schema public to prisma;
+grant create on schema public to prisma;
+grant all on all tables in schema public to prisma;
+grant all on all routines in schema public to prisma;
+grant all on all sequences in schema public to prisma;
+alter default privileges for role postgres in schema public grant all on tables to prisma;
+alter default privileges for role postgres in schema public grant all on routines to prisma;
+alter default privileges for role postgres in schema public grant all on sequences to prisma;
+```
+
+3. Set up Discord App
+See [the Discord integration with Supabase documentation](https://supabase.com/docs/guides/auth/social-login/auth-discord?queryGroups=environment&environment=server)
+
+4. Set up environment variables:
 ```bash
 # Create .env.local file
-DATABASE_URL="your-supabase-database-url"
-NEXT_PUBLIC_SUPABASE_URL="your-supabase-project-url"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
-SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
+NEXT_PUBLIC_SUPABASE_URL=https://yourprojecturl.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xyz
+SUPABASE_URL=https://yourprojecturl.supabase.co
+SUPABASE_ANON_KEY=xyz
+DISCORD_CLIENT_ID=x
+DISCORD_CLIENT_SECRET=x
 
-# Discord OAuth (required)
-NEXT_PUBLIC_DISCORD_CLIENT_ID="your-discord-client-id"
-DISCORD_CLIENT_SECRET="your-discord-client-secret"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+PASS_PRISMA=your_password
+DATABASE_URL=postgresql://prisma.yourprojecturl:your_password@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
 
-# Bunker server configuration
-BUNKER_RELAY_URL="wss://your-bunker-relay.com"
-BUNKER_PRIVATE_KEY="your-bunker-private-key"
 ```
-
-3. Set up the database:
+Create a .env file
 ```bash
-npx prisma generate
-npx prisma db push
+# Create .env
+NEXT_PUBLIC_SUPABASE_URL=https://vwlhjfwabbobhbopmmxa.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bGhqZndhYmJvYmhib3BtbXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1MTY4MTgsImV4cCI6MjA2NjA5MjgxOH0.RQzgeVH8bDHcHCHAc3lSBZRNBwZosrKY5snp1g7ppV0
 ```
 
-4. Run the development server:
+5. Set up the database:
+```bash
+npx run db:generate
+npx run db:migrate
+```
+
+6. Run the development server:
 ```bash
 npm run dev
+```
+
+7. Run the bunker server
+```bash
+npm run multi-bunker
 ```
 
 ## For Client Applications
