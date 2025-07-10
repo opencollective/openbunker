@@ -2,13 +2,14 @@
 
 import { useNostr } from '@/app/(example)/_context/NostrContext';
 import UserProfile from '@/app/(example)/_components/NostrUserProfile';
-import NostrEvents from '@/app/(example)/_components/NostrEvents';
+import UserProfileEvent from '@/app/(example)/_components/UserProfileEvent';
+import BunkerStatus from '@/app/(example)/_components/BunkerStatus';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Home() {
-  const { isConnected: nostrConnected, subscribeToEvents, events } = useNostr();
+  const { isConnected: nostrConnected } = useNostr();
   const router = useRouter();
 
   // Redirect to login if not authenticated
@@ -17,18 +18,6 @@ export default function Home() {
       router.push('/example/login');
     }
   }, [nostrConnected, router]);
-
-  // Subscribe to Nostr events when user is authenticated
-  useEffect(() => {
-    if (nostrConnected) {
-      // Subscribe to kind 24450 events (community onboarding events)
-      subscribeToEvents({
-        kinds: [24450],
-        // You can add specific pubkeys here if needed
-        // p: [user.nostr_pubkey]
-      });
-    }
-  }, [nostrConnected, subscribeToEvents]);
 
   if (!nostrConnected) {
     return (
@@ -58,7 +47,7 @@ export default function Home() {
         </div>
 
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="space-y-6">
               <div className="text-center">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-2">
@@ -83,13 +72,25 @@ export default function Home() {
             <div className="space-y-6">
               <div className="text-center">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                  Nostr Events
+                  Bunker Connection
                 </h2>
                 <p className="text-gray-600">
-                  Real-time events from Nostr relays (kind 24450)
+                  Status of your remote signing connection
                 </p>
               </div>
-              <NostrEvents />
+              <BunkerStatus />
+            </div>
+            
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                  Your Profile
+                </h2>
+                <p className="text-gray-600">
+                  View and edit your Nostr profile (kind 0 event)
+                </p>
+              </div>
+              <UserProfileEvent />
             </div>
           </div>
         </div>
