@@ -7,8 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "websocket": "node server/websocket-server.js",
-    "nostr-listener": "node server/nostr-listener.js",
     "bunker-client": "tsx server/bunker-client.ts",
     "multi-bunker": "dotenv -e .env.local -- tsx server/multi-bunker-server.ts",
     "db:generate": "dotenv -e .env.local -- prisma generate",
