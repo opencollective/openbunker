@@ -5,13 +5,12 @@ import WebSocket from 'ws';
 import NDK, {
   NDKNip46Backend,
   NDKPrivateKeySigner,
-  NDKRelay,
-  NDKUser,
   NDKEvent,
+  Nip46PermitCallbackParams,
 } from '@nostr-dev-kit/ndk';
 import { PrismaClient } from '@prisma/client';
 
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils' // already an installed dependency
+import { hexToBytes } from '@noble/hashes/utils' // already an installed dependency
 
 // Extended NDKNip46Backend with logging
 class LoggingNDKNip46Backend extends NDKNip46Backend {
@@ -100,10 +99,6 @@ class MultiBunkerServer {
     // Create a single NDK instance for the whole server
     this.ndk = new NDK({
       explicitRelayUrls: relays,
-    //   netDebug: (msg: string, relay: NDKRelay, direction?: "send" | "recv") => {
-    //     const hostname = new URL(relay.url).hostname;
-    //     console.log(`${hostname} ${msg} ${direction}`);
-    //   }
     });
 
     // Set up graceful shutdown
@@ -213,11 +208,8 @@ class MultiBunkerServer {
     console.log('Starting bunker instances...');
     
     for (const key of this.keys) {
-      const tokens = this.tokensByNpub.get(key.npub) || [];
-      console.log('tokens', tokens);
-
       try {
-        await this.startBunkerForKey(key, tokens);
+        await this.startBunkerForKey(key);
       } catch (error) {
         console.error(`Error starting bunker for key ${key.npub}:`, error);
       }
@@ -226,20 +218,17 @@ class MultiBunkerServer {
     console.log(`Started ${this.bunkerInstances.size} bunker instances`);
   }
 
-  private async startBunkerForKey(key: any, tokens: any[]) {
+  private async startBunkerForKey(key: any) {
     console.log(`Starting bunker for key: ${key.npub}`);
 
-    // Check if we have the private key (ncryptsec or localKey)
-    const privateKey = key.ncryptsec || key.localKey;
-    
-    console.log('privateKey', key);
+    // Check if we have the private key
+    const privateKey = key.ncryptsec;
     const privateKeyBytes = hexToBytes(privateKey);
 
     if (!privateKey) {
       console.log(`No private key found for ${key.npub} - skipping`);
       return;
     }
-    console.log('privateKey');
 
     // Create signer using the shared NDK instance
     const signer = new NDKPrivateKeySigner(privateKeyBytes);
@@ -249,10 +238,8 @@ class MultiBunkerServer {
     const backend = new LoggingNDKNip46Backend(
       this.ndk,
       signer,
-      async (params) => {
-        console.log('params', params);
-        return true;
-        // return await this.validateConnection(params, key.npub, tokens);
+      async (params: Nip46PermitCallbackParams) => {
+        return await this.validateConnection(params, key.npub);
       },
       key.npub
     );
@@ -275,23 +262,44 @@ class MultiBunkerServer {
     console.log(`\nBunker URI for ${key.npub}:\n  ${bunkerUri}\n`);
   }
 
-  private async validateConnection(params: any, npub: string, tokens: any[]): Promise<boolean> {
+  private async validateConnection(params: Nip46PermitCallbackParams, npub: string): Promise<boolean> {
     console.log(`Validating connection for ${npub}:`, params);
 
     // Check if we have a valid token for this connection
-    const now = BigInt(Date.now());
-    const validTokens = tokens.filter(token => 
-      BigInt(token.expiry) > now
-    );
-
-    if (validTokens.length === 0) {
-      console.log(`No valid tokens found for ${npub} - accepting connection anyway (tokens not required)`);
-      return true;
+    if (params.method === 'connect') {
+      // FIXME the NDK implementation is not passing the actual parameters and passing only the token
+      // const token = params.params;
+      // const dbToken = await prisma.connectTokens.findFirst({
+      //   where: {
+      //     token: token,
+      //     npub: npub,
+      //     expiry: {
+      //       gt: BigInt(Date.now())
+      //     }
+      //   }
+      // });
+      // if (dbToken) {
+      //   console.log(`Token: ${token} is valid`);
+      //   console.log(`DB Token: ${dbToken}`);
+      //   return true;
+      // } else {
+      //   console.log(`Token: ${token} is invalid`);
+      //   return false;
+      // }
     }
+    // const now = BigInt(Date.now());
+    // const validTokens = tokens.filter(token => 
+    //   BigInt(token.expiry) > now
+    // );
 
-    // Accept any connection with valid tokens
-    // You can add more sophisticated validation here
-    console.log(`Valid tokens found for ${npub} - accepting connection`);
+    // if (validTokens.length === 0) {
+    //   console.log(`No valid tokens found for ${npub} - accepting connection anyway (tokens not required)`);
+    //   return true;
+    // }
+
+    // // Accept any connection with valid tokens
+    // // You can add more sophisticated validation here
+    // console.log(`Valid tokens found for ${npub} - accepting connection`);
     return true;
   }
 
@@ -317,7 +325,7 @@ class MultiBunkerServer {
       if (!hasBunker) {
         console.log(`Starting new bunker for ${key.npub}`);
         try {
-          await this.startBunkerForKey(key, tokens);
+          await this.startBunkerForKey(key);
         } catch (error) {
           console.error(`Error starting new bunker for ${key.npub}:`, error);
         }
