@@ -157,7 +157,7 @@ npm run dev
 ⚠️ **Important**: This is a custodial application. Private keys are stored in the database.
 
 ### Current Security Status
-
+- Supabase DB is public...
 - Private keys are stored in Supabase database
 - Additional encryption layer recommended for production
 - Connection token validation needs improvement
