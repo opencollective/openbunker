@@ -10,8 +10,6 @@ services:
       - NODE_ENV=production
       - NOSTR_RELAYS=wss://relay.nsec.app
       # Add other environment variables as needed
-    volumes:
-      - ./prisma:/app/prisma
     env_file:
       - .env.local
     healthcheck:

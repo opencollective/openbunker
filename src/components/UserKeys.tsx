@@ -31,7 +31,6 @@ export default function UserKeys() {
   };
 
   const handleCreateKey = async (data: { name: string; email: string }) => {
-    setCreateLoading(true);
 
     try {
       const response = await fetch("/api/keys", {
@@ -63,8 +62,6 @@ export default function UserKeys() {
       await refetch();
     } catch (err) {
       throw err;
-    } finally {
-      setCreateLoading(false);
     }
   };
 
