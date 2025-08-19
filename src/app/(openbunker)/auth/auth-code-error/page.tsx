@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from "next/link";
 
 export default function AuthCodeError() {
   return (
@@ -49,7 +49,8 @@ export default function AuthCodeError() {
                 </h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p>
-                    Please try signing in again. If the problem persists, check your Discord account settings.
+                    Please try signing in again. If the problem persists, check
+                    your Discord account settings.
                   </p>
                 </div>
               </div>
@@ -66,6 +67,5 @@ export default function AuthCodeError() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

@@ -5,13 +5,17 @@ This document explains the authentication system implemented in OpenBunker, whic
 ## Authentication Methods
 
 ### 1. Secret Key Authentication
+
 Users can authenticate directly with their existing Nostr secret key (nsec1...). This method:
+
 - Validates the secret key format
 - Stores the key locally in the browser
 - Uses the key to sign Nostr events
 
 ### 2. OpenBunker Authentication (Discord OAuth)
+
 Users can authenticate through Discord OAuth to get a new Nostr key. This method:
+
 - Redirects users to Discord for OAuth
 - Exchanges the Discord code for user information
 - Generates a new Nostr secret key
@@ -27,6 +31,7 @@ When `NODE_ENV=development`, the Discord OAuth flow is automatically faked for e
 - **Visual Indicators**: Development mode is clearly indicated in the UI
 
 ### Development Mode Features
+
 - Fake Discord user data is generated
 - OAuth flow is simulated with realistic delays
 - No popup windows (direct redirect)
@@ -35,6 +40,7 @@ When `NODE_ENV=development`, the Discord OAuth flow is automatically faked for e
 ## Setup Instructions
 
 ### Environment Variables
+
 Create a `.env.local` file with the following variables:
 
 ```env
@@ -48,6 +54,7 @@ DISCORD_CLIENT_SECRET=your-discord-client-secret
 ```
 
 ### Discord Application Setup (Production Only)
+
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Create a new application
 3. Go to OAuth2 settings
@@ -57,22 +64,26 @@ DISCORD_CLIENT_SECRET=your-discord-client-secret
 ## Pages and Components
 
 ### Pages
+
 - `/login` - Main login page with authentication options
 - `/example` - Application example showing user information
 - `/openbunker-auth` - Discord OAuth flow handler
 
 ### Components
+
 - `LoginOptions` - Main component for choosing authentication method
 - `SecretKeyLogin` - Form for entering Nostr secret key
 - `OpenBunkerLogin` - Button to start Discord OAuth flow
 
 ### API Endpoints
+
 - `/api/auth/openbunker-url` - Returns OpenBunker authentication URL
 - `/api/auth/discord-callback` - Handles Discord OAuth callback
 
 ## User Flow
 
 ### Secret Key Authentication
+
 1. User visits `/login`
 2. Clicks "Authenticate with Secret Key"
 3. Enters their nsec1 secret key
@@ -80,6 +91,7 @@ DISCORD_CLIENT_SECRET=your-discord-client-secret
 5. User is redirected to home page
 
 ### OpenBunker Authentication (Development)
+
 1. User visits `/login`
 2. Clicks "Authenticate with OpenBunker"
 3. Sees development mode indicator
@@ -89,6 +101,7 @@ DISCORD_CLIENT_SECRET=your-discord-client-secret
 7. Key is stored and user is redirected to home page
 
 ### OpenBunker Authentication (Production)
+
 1. User visits `/login`
 2. Clicks "Authenticate with OpenBunker"
 3. Popup opens with Discord OAuth
@@ -111,4 +124,4 @@ DISCORD_CLIENT_SECRET=your-discord-client-secret
 - Implement database storage for user profiles
 - Add more OAuth providers (GitHub, Google, etc.)
 - Implement proper key derivation from Discord user data
-- Add session management and token refresh 
+- Add session management and token refresh

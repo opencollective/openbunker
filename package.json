@@ -12,7 +12,8 @@
     "db:generate": "dotenv -e .env.local -- prisma generate",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
-    "dev:all": "concurrently \"npm run multi-bunker\" \"npm run dev\""
+    "dev:all": "concurrently \"npm run multi-bunker\" \"npm run dev\"",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@nostr-dev-kit/ndk": "^2.14.32",
@@ -38,6 +39,7 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
+    "prettier": "^3.6.2",
     "prisma": "^6.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.0.0",

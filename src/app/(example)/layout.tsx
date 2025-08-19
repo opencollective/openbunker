@@ -8,7 +8,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "OpenBunker - Nostr Community Onboarding",
-  description: "A Discord-like login app for onboarding members to Nostr communities",
+  description:
+    "A Discord-like login app for onboarding members to Nostr communities",
 };
 
 export default function RootLayout({
@@ -19,10 +20,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-          <NostrProvider>
-            {children}
-          </NostrProvider>
+        <NostrProvider>{children}</NostrProvider>
       </body>
     </html>
   );
-} 
+}

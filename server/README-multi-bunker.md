@@ -22,6 +22,7 @@ This is a server script that manages multiple NIP-46 bunker instances based on d
 The server expects the following database structure:
 
 ### Keys Table
+
 ```sql
 model Keys {
   npub     String @id
@@ -32,6 +33,7 @@ model Keys {
 ```
 
 ### ConnectTokens Table
+
 ```sql
 model ConnectTokens {
   token     String  @id
@@ -46,11 +48,13 @@ model ConnectTokens {
 ## Usage
 
 ### Start the server
+
 ```bash
 npm run multi-bunker
 ```
 
 ### Start with the web app
+
 ```bash
 npm run dev:multi-bunker
 ```
@@ -90,12 +94,15 @@ bunker://<pubkey>?relay=<relay_url>
 ## Configuration
 
 ### Relays
+
 The server connects to these relays by default:
+
 - `wss://relay.nsec.app`
 
 You can modify the `relays` array in the script to use different relays.
 
 ### Scanning Interval
+
 The database scanning interval is set to 5 minutes. You can modify the `setupPeriodicScanning` method to change this.
 
 ## Monitoring
@@ -126,16 +133,19 @@ The server handles SIGTERM and SIGINT signals gracefully:
 ## Troubleshooting
 
 ### No bunkers starting
+
 - Check that keys have valid `ncryptsec` or `localKey` values
 - Verify that connection tokens exist and haven't expired
 - Check database connectivity
 
 ### Connection rejections
+
 - Verify that connection tokens are not expired
 - Check the `validateConnection` method logic
 - Review server logs for validation details
 
 ### Database errors
+
 - Ensure DATABASE_URL is correctly configured
 - Check that Prisma schema is up to date
 - Verify database permissions
@@ -161,4 +171,4 @@ Bunker URI for npub1abc...:
 
 Started 1 bunker instances
 Multi-Bunker Server Status: 1 active bunkers - 2024-01-15T10:30:00.000Z
-``` 
+```

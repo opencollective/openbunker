@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useNostr } from '../_context/NostrContext';
-import { getPublicKey } from 'nostr-tools';
-import { nip19 } from 'nostr-tools';
+import { useState } from "react";
+import { useNostr } from "../_context/NostrContext";
+import { getPublicKey } from "nostr-tools";
+import { nip19 } from "nostr-tools";
 
 export default function UserProfile() {
   const { localSecretKey, bunkerConnectionToken } = useNostr();
@@ -33,12 +33,18 @@ export default function UserProfile() {
       </div>
       <div>
         <h4 className="font-semibold text-gray-900 mb-1">Secret Key (hex)</h4>
-        <p className="text-sm font-mono text-gray-700 break-all">{localSecretKey}</p>
+        <p className="text-sm font-mono text-gray-700 break-all">
+          {localSecretKey}
+        </p>
       </div>
       {bunkerConnectionToken && (
         <div>
-          <h4 className="font-semibold text-gray-900 mb-1">Bunker Connection Token</h4>
-          <p className="text-sm font-mono text-gray-700 break-all">{bunkerConnectionToken}</p>
+          <h4 className="font-semibold text-gray-900 mb-1">
+            Bunker Connection Token
+          </h4>
+          <p className="text-sm font-mono text-gray-700 break-all">
+            {bunkerConnectionToken}
+          </p>
         </div>
       )}
     </div>
@@ -47,7 +53,7 @@ export default function UserProfile() {
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex items-center space-x-4 mb-6">
-        <div 
+        <div
           className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
@@ -63,7 +69,8 @@ export default function UserProfile() {
           <p className="text-gray-600">Nostr Public Key</p>
           {bunkerConnectionToken && (
             <p className="text-sm text-indigo-600 font-mono">
-              {bunkerConnectionToken.slice(0, 8)}...{bunkerConnectionToken.slice(-8)}
+              {bunkerConnectionToken.slice(0, 8)}...
+              {bunkerConnectionToken.slice(-8)}
             </p>
           )}
         </div>
@@ -80,9 +87,9 @@ export default function UserProfile() {
       <button
         onClick={() => {
           // Handle sign out
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('openbunker_session');
-            window.location.href = '/example';
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("openbunker_session");
+            window.location.href = "/example";
           }
         }}
         className="w-full mt-6 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
@@ -91,4 +98,4 @@ export default function UserProfile() {
       </button>
     </div>
   );
-} 
+}

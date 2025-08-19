@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useNostr } from '@/app/(example)/_context/NostrContext';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useNostr } from "@/app/(example)/_context/NostrContext";
+import { useRouter } from "next/navigation";
 
 export default function SecretKeyLogin() {
-  const [secretKey, setSecretKey] = useState('');
+  const [secretKey, setSecretKey] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const { setLocalSecretKey } = useNostr();
 
@@ -18,13 +18,13 @@ export default function SecretKeyLogin() {
     if (!secretKey.trim()) return;
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       setLocalSecretKey(secretKey as unknown as Uint8Array);
-      router.push('/');
+      router.push("/");
     } catch (err) {
-      setError('Invalid secret key. Please check your key and try again.');
+      setError("Invalid secret key. Please check your key and try again.");
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,10 @@ export default function SecretKeyLogin() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="secretKey" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="secretKey"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Nostr Secret Key
           </label>
           <input
@@ -71,15 +74,16 @@ export default function SecretKeyLogin() {
           disabled={loading || !secretKey.trim()}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
-          {loading ? 'Authenticating...' : 'Authenticate'}
+          {loading ? "Authenticating..." : "Authenticate"}
         </button>
       </form>
 
       <div className="text-center">
         <p className="text-xs text-gray-500">
-          <strong>Security Note:</strong> Your secret key is stored locally in your browser and is never sent to our servers.
+          <strong>Security Note:</strong> Your secret key is stored locally in
+          your browser and is never sent to our servers.
         </p>
       </div>
     </div>
   );
-} 
+}

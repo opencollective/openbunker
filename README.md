@@ -31,6 +31,7 @@ OpenBunker is a **custodial application**, meaning private keys are stored in a 
 ### Installation
 
 1. Clone the repository and install dependencies:
+
 ```bash
 npm install
 ```
@@ -56,9 +57,10 @@ alter default privileges for role postgres in schema public grant all on sequenc
 ```
 
 3. Set up Discord App
-See [the Discord integration with Supabase documentation](https://supabase.com/docs/guides/auth/social-login/auth-discord?queryGroups=environment&environment=server)
+   See [the Discord integration with Supabase documentation](https://supabase.com/docs/guides/auth/social-login/auth-discord?queryGroups=environment&environment=server)
 
 4. Set up environment variables:
+
 ```bash
 # Create .env.local file
 NEXT_PUBLIC_SUPABASE_URL=https://yourprojecturl.supabase.co
@@ -72,7 +74,9 @@ PASS_PRISMA=your_password
 DATABASE_URL=postgresql://prisma.yourprojecturl:your_password@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
 
 ```
+
 Create a .env file
+
 ```bash
 # Create .env
 NEXT_PUBLIC_SUPABASE_URL=https://vwlhjfwabbobhbopmmxa.supabase.co
@@ -80,17 +84,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 ```
 
 5. Set up the database:
+
 ```bash
 npx run db:generate
 npx run db:migrate
 ```
 
 6. Run the development server:
+
 ```bash
 npm run dev
 ```
 
 7. Run the bunker server
+
 ```bash
 npm run multi-bunker
 ```
@@ -108,8 +115,8 @@ Your client application should open a popup window to the OpenBunker authenticat
 We recommend using NDK's bunker signer with the bunker connection token for secure remote signing:
 
 ```typescript
-import { NDK } from '@nostr-dev-kit/ndk';
-import { NDKBunkerSigner } from '@nostr-dev-kit/ndk';
+import { NDK } from "@nostr-dev-kit/ndk";
+import { NDKBunkerSigner } from "@nostr-dev-kit/ndk";
 
 // Initialize bunker signer with connection token
 const bunkerSigner = new NDKBunkerSigner(connectionToken);
@@ -134,11 +141,11 @@ The example application in the `(example)` folder demonstrates how to integrate 
 - Show proper integration patterns
 
 To run the example:
+
 ```bash
 npm run dev
 # Navigate to http://localhost:3000/example
 ```
-
 
 ### Example NOSTR application demo
 
@@ -157,6 +164,7 @@ npm run dev
 ⚠️ **Important**: This is a custodial application. Private keys are stored in the database.
 
 ### Current Security Status
+
 - Supabase DB is public...
 - Private keys are stored in Supabase database
 - Additional encryption layer recommended for production
@@ -167,16 +175,19 @@ npm run dev
 Before OpenBunker should be considered production-ready, the following issues need to be addressed:
 
 ### 1. Private Key Security
+
 - **Assessment Required**: Current security measures need thorough evaluation
 - **Additional Encryption**: Consider implementing additional encryption layers for stored private keys
 - **Key Rotation**: Implement secure key rotation mechanisms
 
 ### 2. Authorization System
+
 - **Connection Token Validation**: Currently, the server authorizes every local key without proper connection token validation on first connection
 - **Session Management**: Improve session validation and token-based authentication
 - **Access Control**: Implement proper authorization checks for all bunker operations
 
 ### 3. Additional Features
+
 - **Multi-Social Support**: Add support for additional social platforms (Twitter, GitHub, etc.)
 - **Audit Logging**: Add comprehensive audit trails for all operations
 

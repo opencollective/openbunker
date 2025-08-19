@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { generateSecretKey, getPublicKey, nip19 } from "nostr-tools";
 
 const prisma = new PrismaClient();
 
@@ -10,19 +10,19 @@ export async function POST(request: NextRequest) {
 
     if (!code) {
       return NextResponse.json(
-        { error: 'Missing authorization code' },
-        { status: 400 }
+        { error: "Missing authorization code" },
+        { status: 400 },
       );
     }
 
     // In development mode, fake the Discord authentication
-    if (process.env.NODE_ENV === 'development' && code.startsWith('dev_')) {
-      console.log('Development mode: Faking Discord authentication');
-      
+    if (process.env.NODE_ENV === "development" && code.startsWith("dev_")) {
+      console.log("Development mode: Faking Discord authentication");
+
       // Generate fake Discord user data
       const fakeDiscordUser = {
-        id: 'dev_' + Math.random().toString(36).substring(2, 10),
-        username: 'dev_user_' + Math.random().toString(36).substring(2, 8),
+        id: "dev_" + Math.random().toString(36).substring(2, 10),
+        username: "dev_user_" + Math.random().toString(36).substring(2, 8),
         email: `dev_${Math.random().toString(36).substring(2, 8)}@example.com`,
         avatar: null,
       };
@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
       // Try to find existing key in database by email
       const existingKey = await prisma.keys.findFirst({
         where: {
-          email: fakeDiscordUser.email
-        }
+          email: fakeDiscordUser.email,
+        },
       });
 
       if (existingKey) {
         // For existing users, generate a new key since we can't retrieve their original secret key
-        console.log('Generating new Nostr key for existing development user');
+        console.log("Generating new Nostr key for existing development user");
         const secretKey = generateSecretKey();
         const publicKey = getPublicKey(secretKey);
         const nsec = nip19.nsecEncode(secretKey);
@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
             name: fakeDiscordUser.username,
             avatar: fakeDiscordUser.avatar,
             relays: [],
-            enckey: '', // This might need to be generated based on your encryption scheme
+            enckey: "", // This might need to be generated based on your encryption scheme
             ncryptsec: undefined,
             localKey: undefined,
-          }
+          },
         });
 
         return NextResponse.json({
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         });
       } else {
         // Generate a new Nostr key
-        console.log('Generating new Nostr key for development user');
+        console.log("Generating new Nostr key for development user");
         const secretKey = generateSecretKey();
         const publicKey = getPublicKey(secretKey);
         const nsec = nip19.nsecEncode(secretKey);
@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
             name: fakeDiscordUser.username,
             avatar: fakeDiscordUser.avatar,
             relays: [],
-            enckey: '', // This might need to be generated based on your encryption scheme
+            enckey: "", // This might need to be generated based on your encryption scheme
             ncryptsec: undefined,
             localKey: undefined,
-          }
+          },
         });
 
         return NextResponse.json({
@@ -94,25 +94,28 @@ export async function POST(request: NextRequest) {
 
     // Production Discord OAuth flow
     // Exchange Discord code for access token
-    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
+    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        client_id: process.env.DISCORD_CLIENT_ID || '',
-        client_secret: process.env.DISCORD_CLIENT_SECRET || '',
-        grant_type: 'authorization_code',
+        client_id: process.env.DISCORD_CLIENT_ID || "",
+        client_secret: process.env.DISCORD_CLIENT_SECRET || "",
+        grant_type: "authorization_code",
         code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/openbunker-auth`,
+        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/openbunker-auth`,
       }),
     });
 
     if (!tokenResponse.ok) {
-      console.error('Discord token exchange failed:', await tokenResponse.text());
+      console.error(
+        "Discord token exchange failed:",
+        await tokenResponse.text(),
+      );
       return NextResponse.json(
-        { error: 'Failed to exchange Discord authorization code' },
-        { status: 400 }
+        { error: "Failed to exchange Discord authorization code" },
+        { status: 400 },
       );
     }
 
@@ -120,17 +123,20 @@ export async function POST(request: NextRequest) {
     const { access_token } = tokenData;
 
     // Get Discord user information
-    const userResponse = await fetch('https://discord.com/api/users/@me', {
+    const userResponse = await fetch("https://discord.com/api/users/@me", {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
     });
 
     if (!userResponse.ok) {
-      console.error('Discord user info fetch failed:', await userResponse.text());
+      console.error(
+        "Discord user info fetch failed:",
+        await userResponse.text(),
+      );
       return NextResponse.json(
-        { error: 'Failed to fetch Discord user information' },
-        { status: 400 }
+        { error: "Failed to fetch Discord user information" },
+        { status: 400 },
       );
     }
 
@@ -139,13 +145,16 @@ export async function POST(request: NextRequest) {
     // Try to find existing key in database by email
     const existingKey = await prisma.keys.findFirst({
       where: {
-        email: discordUser.email
-      }
+        email: discordUser.email,
+      },
     });
 
     if (existingKey) {
       // For existing users, generate a new key since we can't retrieve their original secret key
-      console.log('Generating new Nostr key for existing Discord user:', discordUser.email);
+      console.log(
+        "Generating new Nostr key for existing Discord user:",
+        discordUser.email,
+      );
       const secretKey = generateSecretKey();
       const publicKey = getPublicKey(secretKey);
       const nsec = nip19.nsecEncode(secretKey);
@@ -161,10 +170,10 @@ export async function POST(request: NextRequest) {
           name: discordUser.username,
           avatar: discordUser.avatar,
           relays: [],
-          enckey: '', // This might need to be generated based on your encryption scheme
+          enckey: "", // This might need to be generated based on your encryption scheme
           ncryptsec: undefined,
           localKey: undefined,
-        }
+        },
       });
 
       return NextResponse.json({
@@ -178,7 +187,10 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Generate a new Nostr key
-      console.log('Generating new Nostr key for Discord user:', discordUser.email);
+      console.log(
+        "Generating new Nostr key for Discord user:",
+        discordUser.email,
+      );
       const secretKey = generateSecretKey();
       const publicKey = getPublicKey(secretKey);
       const nsec = nip19.nsecEncode(secretKey);
@@ -193,10 +205,10 @@ export async function POST(request: NextRequest) {
           name: discordUser.username,
           avatar: discordUser.avatar,
           relays: [],
-          enckey: '', // This might need to be generated based on your encryption scheme
+          enckey: "", // This might need to be generated based on your encryption scheme
           ncryptsec: undefined,
           localKey: undefined,
-        }
+        },
       });
 
       return NextResponse.json({
@@ -210,10 +222,10 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Discord callback error:', error);
+    console.error("Discord callback error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
-} 
+}

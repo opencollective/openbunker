@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ConnectionToken {
   token: string;
@@ -40,46 +40,56 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
     try {
       const response = await fetch(`/api/keys/${npub}/connection-tokens`);
       if (!response.ok) {
-        throw new Error('Failed to fetch connection tokens');
+        throw new Error("Failed to fetch connection tokens");
       }
 
       const data = await response.json();
       setTokens(data.tokens || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch connection tokens');
-      console.error('Error fetching connection tokens:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch connection tokens",
+      );
+      console.error("Error fetching connection tokens:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const createToken = async (subNpub?: string): Promise<ConnectionToken | null> => {
+  const createToken = async (
+    subNpub?: string,
+  ): Promise<ConnectionToken | null> => {
     if (!user || !npub) {
       return null;
     }
 
     try {
       const response = await fetch(`/api/keys/${npub}/connection-tokens`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ subNpub }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create connection token');
+        throw new Error("Failed to create connection token");
       }
 
       const data = await response.json();
-      
+
       // Add the new token to the list
-      setTokens(prev => [data.token, ...prev]);
-      
+      setTokens((prev) => [data.token, ...prev]);
+
       return data.token;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create connection token');
-      console.error('Error creating connection token:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create connection token",
+      );
+      console.error("Error creating connection token:", err);
       return null;
     }
   };
@@ -90,21 +100,28 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
     }
 
     try {
-      const response = await fetch(`/api/keys/${npub}/connection-tokens?token=${encodeURIComponent(token)}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/keys/${npub}/connection-tokens?token=${encodeURIComponent(token)}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to delete connection token');
+        throw new Error("Failed to delete connection token");
       }
 
       // Remove the token from the list
-      setTokens(prev => prev.filter(t => t.token !== token));
-      
+      setTokens((prev) => prev.filter((t) => t.token !== token));
+
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete connection token');
-      console.error('Error deleting connection token:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to delete connection token",
+      );
+      console.error("Error deleting connection token:", err);
       return false;
     }
   };
@@ -121,4 +138,4 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
     createToken,
     deleteToken,
   };
-} 
+}

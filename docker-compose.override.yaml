@@ -20,5 +20,3 @@ services:
       - ./prisma:/app/prisma
       - ./.next:/app/.next
     command: sh -c "npx prisma generate && npm run dev"
-
-

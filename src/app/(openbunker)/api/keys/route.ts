@@ -1,17 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { prisma } from '@/lib/db';
-import { generateSecretKey, getPublicKey } from 'nostr-tools';
-import { nip19 } from 'nostr-tools';
-import { bytesToHex } from '@noble/hashes/utils';
+import { NextRequest, NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { prisma } from "@/lib/db";
+import { generateSecretKey, getPublicKey } from "nostr-tools";
+import { nip19 } from "nostr-tools";
+import { bytesToHex } from "@noble/hashes/utils";
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get all keys associated with this user
@@ -24,16 +27,16 @@ export async function GET(request: NextRequest) {
         key: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
     return NextResponse.json({ keys: userKeys });
   } catch (error) {
-    console.error('Error fetching user keys:', error);
+    console.error("Error fetching user keys:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
@@ -41,10 +44,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -60,10 +66,10 @@ export async function POST(request: NextRequest) {
     const key = await prisma.keys.create({
       data: {
         npub: npub,
-        name: name || 'My Key',
-        email: user.email || '',
+        name: name || "My Key",
+        email: user.email || "",
         relays: [],
-        enckey: '',
+        enckey: "",
         profile: undefined,
         // Should this be encrypted
         ncryptsec: bytesToHex(secretKey),
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         npub: npub,
-        name: name || 'My Key',
+        name: name || "My Key",
         isActive: true,
       },
     });
@@ -89,10 +95,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error creating key:', error);
+    console.error("Error creating key:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
-} 
+}

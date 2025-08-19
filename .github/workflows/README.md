@@ -12,10 +12,12 @@ You need to add the following secrets to your GitHub repository:
 2. Add the following secrets:
 
 #### `COOLIFY_TOKEN`
+
 - This is your Coolify API token
 - Generate it in Coolify: Settings → API → Create Token
 
 #### `COOLIFY_WEBHOOK`
+
 - This is the webhook endpoint from Coolify
 - Get it from: Your Resource → Webhook menu in Coolify
 
@@ -55,6 +57,7 @@ In Coolify, set up your deployment:
 ## Manual Deployment
 
 You can manually trigger a deployment by:
+
 1. Going to Actions tab in GitHub
 2. Selecting "Deploy to Coolify" workflow
 3. Clicking "Run workflow"
