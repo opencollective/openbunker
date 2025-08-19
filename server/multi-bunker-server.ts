@@ -26,6 +26,19 @@ class LoggingNDKNip46Backend extends NDKNip46Backend {
     this.npub = npub;
   }
 
+  async start() {
+    this.localUser = await this.signer.user();
+    const sub = this.ndk.subscribe(
+      {
+        kinds: [24133],
+        "#p": [this.localUser.pubkey],
+        since: Math.floor(Date.now() / 1000)
+      },
+      { closeOnEose: false }
+    );
+    sub.on("event", (e) => this.handleIncomingEvent(e));
+  }
+
   protected async handleIncomingEvent(event: NDKEvent): Promise<void> {
     const timestamp = new Date().toISOString();
     const remotePubkey = event.pubkey;
