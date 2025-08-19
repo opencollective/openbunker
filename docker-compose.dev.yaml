@@ -16,8 +16,6 @@ services:
     volumes:
       - ./server:/app/server
       - ./prisma:/app/prisma
-    ports:
-      - "3001:3001"
     command: sh -c "npx prisma generate && npm run multi-bunker"
     healthcheck:
       test: ["CMD", "true"]
@@ -37,7 +35,6 @@ services:
         condition: service_healthy
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_BUNKER_SERVER_URL=http://bunker-server:3001
     volumes:
       - ./src:/app/src
       - ./prisma:/app/prisma

@@ -16,8 +16,6 @@ services:
       - ./prisma:/app/prisma
     env_file:
       - .env.local
-    ports:
-      - "3001:3001"
     healthcheck:
       test: ["CMD", "true"]
       interval: 30s
@@ -36,8 +34,6 @@ services:
         condition: service_healthy
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_BUNKER_SERVER_URL=http://bunker-server:3001
-      # Add other environment variables as needed
     ports:
       - "3000:3000"
     healthcheck:
