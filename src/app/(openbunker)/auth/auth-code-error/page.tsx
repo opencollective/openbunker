@@ -67,4 +67,5 @@ export default function AuthCodeError() {
       </div>
     </div>
   )
-} 
+}
+

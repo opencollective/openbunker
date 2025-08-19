@@ -8,7 +8,7 @@ const TOKEN_TTL = 600000; // 10 minutes
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { npub: string } }
+  { params }: { params: Promise<{ npub: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -44,7 +44,7 @@ export async function GET(
     });
 
     // Transform the data to be more frontend-friendly
-    const tokens = connectionTokens.map(token => ({
+    const tokens = connectionTokens.map((token: any) => ({
       token: token.token,
       npub: token.npub,
       subNpub: token.subNpub,
@@ -66,7 +66,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { npub: string } }
+  { params }: { params: Promise<{ npub: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -133,7 +133,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { npub: string } }
+  { params }: { params: Promise<{ npub: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient();

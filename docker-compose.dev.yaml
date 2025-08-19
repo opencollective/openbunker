@@ -1,0 +1,58 @@
+
+
+services:
+  # Multi-Bunker Server (Development)
+  bunker-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: openbunker-server-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - NOSTR_RELAYS=wss://relay.nsec.app
+    env_file:
+      - .env.local
+    volumes:
+      - ./server:/app/server
+      - ./prisma:/app/prisma
+    ports:
+      - "3001:3001"
+    command: sh -c "npx prisma generate && npm run multi-bunker"
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Next.js Frontend (Development)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openbunker-frontend-dev
+    restart: unless-stopped
+    depends_on:
+      bunker-server:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_BUNKER_SERVER_URL=http://bunker-server:3001
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./.next:/app/.next
+      - ./.env.local:/app/.env.local
+      - ./.env:/app/.env
+    ports:
+      - "3000:3000"
+    command: sh -c "npx prisma generate && npm run dev"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  default:
+    name: openbunker-dev-network

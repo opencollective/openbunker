@@ -1,0 +1,24 @@
+# This file is automatically loaded by docker-compose
+# Use this for local development overrides
+
+services:
+  # Override bunker server for local development
+  bunker-server:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./server:/app/server
+      - ./prisma:/app/prisma
+    command: sh -c "npx prisma generate && npm run multi-bunker"
+
+  # Override frontend for local development
+  frontend:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./.next:/app/.next
+    command: sh -c "npx prisma generate && npm run dev"
+
+

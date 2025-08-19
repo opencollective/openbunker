@@ -47,13 +47,12 @@ export async function POST(request: NextRequest) {
           where: { npub: existingKey.npub },
           data: {
             npub: npub,
-            jsonData: JSON.stringify({ email: fakeDiscordUser.email }),
+            profile: { email: fakeDiscordUser.email },
             email: fakeDiscordUser.email,
             name: fakeDiscordUser.username,
             avatar: fakeDiscordUser.avatar,
             relays: [],
             enckey: '', // This might need to be generated based on your encryption scheme
-            profile: undefined,
             ncryptsec: undefined,
             localKey: undefined,
           }
@@ -75,13 +74,12 @@ export async function POST(request: NextRequest) {
         await prisma.keys.create({
           data: {
             npub: npub,
-            jsonData: JSON.stringify({ email: fakeDiscordUser.email }),
+            profile: { email: fakeDiscordUser.email },
             email: fakeDiscordUser.email,
             name: fakeDiscordUser.username,
             avatar: fakeDiscordUser.avatar,
             relays: [],
             enckey: '', // This might need to be generated based on your encryption scheme
-            profile: undefined,
             ncryptsec: undefined,
             localKey: undefined,
           }
@@ -158,13 +156,12 @@ export async function POST(request: NextRequest) {
         where: { npub: existingKey.npub },
         data: {
           npub: npub,
-          jsonData: JSON.stringify({ email: discordUser.email }),
+          profile: { email: discordUser.email },
           email: discordUser.email,
           name: discordUser.username,
           avatar: discordUser.avatar,
           relays: [],
           enckey: '', // This might need to be generated based on your encryption scheme
-          profile: undefined,
           ncryptsec: undefined,
           localKey: undefined,
         }
@@ -191,13 +188,12 @@ export async function POST(request: NextRequest) {
       await prisma.keys.create({
         data: {
           npub: npub,
-          jsonData: JSON.stringify({ email: discordUser.email }),
+          profile: { email: discordUser.email },
           email: discordUser.email,
           name: discordUser.username,
           avatar: discordUser.avatar,
           relays: [],
           enckey: '', // This might need to be generated based on your encryption scheme
-          profile: undefined,
           ncryptsec: undefined,
           localKey: undefined,
         }

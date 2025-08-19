@@ -20,11 +20,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
-  const supabase = createClient()
+  
+  // Lazy initialization of Supabase client to avoid build-time issues
+  const getSupabase = () => {
+    try {
+      return createClient();
+    } catch (error) {
+      console.warn('Supabase client not available:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
+      const supabase = getSupabase();
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+      
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
       setCurrentSession(session)
@@ -34,6 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getInitialSession()
 
     // Listen for auth changes
+    const supabase = getSupabase();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null)
@@ -43,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [])
 
   const signIn = async (email: string) => {
     try {
@@ -73,6 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const authenticateWithOpenBunker = async (): Promise<string> => {
     try {
       setLoading(true);
+      
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not available');
+      }
       
       const { error, data } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
@@ -139,6 +165,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setLoading(true);
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not available');
+      }
+      
       const { error } = await supabase.auth.signOut()
       if (error) {
         console.error('Error signing out:', error.message)
