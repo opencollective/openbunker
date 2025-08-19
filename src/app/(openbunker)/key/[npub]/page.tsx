@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useUserKeys } from "@/hooks/useUserKeys";
 import ConnectionTokensList from "@/components/ConnectionTokensList";
 import Link from "next/link";
 
 export default function KeyDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { keys, loading, error } = useUserKeys();
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -118,7 +117,7 @@ export default function KeyDetailPage() {
               Key Not Found
             </h3>
             <p className="text-gray-600 mb-4">
-              The requested key could not be found or you don't have access to
+              The requested key could not be found or you don&apos;t have access to
               it.
             </p>
             <Link

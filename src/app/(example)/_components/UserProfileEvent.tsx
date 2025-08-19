@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useNostr } from "@/app/(example)/_context/NostrContext";
 import { Event } from "nostr-tools";
 
@@ -29,7 +30,7 @@ export default function UserProfileEvent() {
 
     try {
       await fetchUserProfile();
-    } catch (err) {
+    } catch {
       setError("Failed to refresh profile");
     } finally {
       setIsRefreshing(false);
@@ -366,13 +367,12 @@ export default function UserProfileEvent() {
             <>
               <div className="flex items-center space-x-4">
                 {parseProfileData(userProfile).picture && (
-                  <img
+                  <Image
                     src={parseProfileData(userProfile).picture}
                     alt="Profile"
-                    className="w-16 h-16 rounded-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
+                    width={64}
+                    height={64}
+                    className="rounded-full object-cover"
                   />
                 )}
                 <div>

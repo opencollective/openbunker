@@ -23,7 +23,7 @@ export default function SecretKeyLogin() {
     try {
       setLocalSecretKey(secretKey as unknown as Uint8Array);
       router.push("/");
-    } catch (err) {
+    } catch {
       setError("Invalid secret key. Please check your key and try again.");
     } finally {
       setLoading(false);

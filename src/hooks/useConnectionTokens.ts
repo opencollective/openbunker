@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ConnectionToken {
@@ -9,7 +9,7 @@ interface ConnectionToken {
   subNpub?: string;
   timestamp: number;
   expiry: number;
-  jsonData: any;
+  jsonData: Record<string, unknown> | null;
   isExpired: boolean;
 }
 
@@ -28,7 +28,7 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTokens = async () => {
+  const fetchTokens = useCallback(async () => {
     if (!user || !npub) {
       setTokens([]);
       return;
@@ -55,7 +55,7 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, npub]);
 
   const createToken = async (
     subNpub?: string,
@@ -128,7 +128,7 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
 
   useEffect(() => {
     fetchTokens();
-  }, [user, npub]);
+  }, [user, npub, fetchTokens]);
 
   return {
     tokens,

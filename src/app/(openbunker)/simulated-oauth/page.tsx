@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 
 export default function OpenBunkerAuthPage() {
   const [loading, setLoading] = useState(true);
@@ -9,55 +8,8 @@ export default function OpenBunkerAuthPage() {
   const [step, setStep] = useState<"initial" | "processing" | "complete">(
     "initial",
   );
-  const router = useRouter();
 
-  useEffect(() => {
-    // Check if we have a Discord code in the URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
-    const error = urlParams.get("error");
-
-    if (error) {
-      setError("Discord authentication failed. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    if (code) {
-      handleDiscordCallback(code);
-    } else {
-      // Start Discord OAuth flow
-      startDiscordOAuth();
-    }
-  }, []);
-
-  const startDiscordOAuth = () => {
-    // In development, fake the OAuth flow
-    if (process.env.NODE_ENV === "development") {
-      setStep("processing");
-      // Simulate a delay to make it feel more realistic
-      setTimeout(() => {
-        // Generate a fake Discord code
-        const fakeCode = "dev_" + Math.random().toString(36).substring(2, 15);
-        handleDiscordCallback(fakeCode);
-      }, 2000);
-      return;
-    }
-
-    // Production Discord OAuth URL
-    const clientId =
-      process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "your-discord-client-id";
-    const redirectUri = encodeURIComponent(
-      `${window.location.origin}/openbunker-auth`,
-    );
-    const scope = encodeURIComponent("identify email");
-
-    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
-
-    window.location.href = discordAuthUrl;
-  };
-
-  const handleDiscordCallback = async (code: string) => {
+  const handleDiscordCallback = useCallback(async (code: string) => {
     try {
       setStep("processing");
 
@@ -87,7 +39,53 @@ export default function OpenBunkerAuthPage() {
       setError("Failed to complete authentication. Please try again.");
       setLoading(false);
     }
-  };
+  }, []);
+
+  const startDiscordOAuth = useCallback(() => {
+    // In development, fake the OAuth flow
+    if (process.env.NODE_ENV === "development") {
+      setStep("processing");
+      // Simulate a delay to make it feel more realistic
+      setTimeout(() => {
+        // Generate a fake Discord code
+        const fakeCode = "dev_" + Math.random().toString(36).substring(2, 15);
+        handleDiscordCallback(fakeCode);
+      }, 2000);
+      return;
+    }
+
+    // Production Discord OAuth URL
+    const clientId =
+      process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "your-discord-client-id";
+    const redirectUri = encodeURIComponent(
+      `${window.location.origin}/openbunker-auth`,
+    );
+    const scope = encodeURIComponent("identify email");
+
+    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+
+    window.location.href = discordAuthUrl;
+  }, [handleDiscordCallback]);
+
+  useEffect(() => {
+    // Check if we have a Discord code in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const error = urlParams.get("error");
+
+    if (error) {
+      setError("Discord authentication failed. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    if (code) {
+      handleDiscordCallback(code);
+    } else {
+      // Start Discord OAuth flow
+      startDiscordOAuth();
+    }
+  }, [handleDiscordCallback, startDiscordOAuth]);
 
   const handlePopupCallback = (secretKey: string) => {
     // Check if we're in a popup window

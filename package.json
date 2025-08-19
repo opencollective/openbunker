@@ -13,7 +13,8 @@
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "dev:all": "concurrently \"npm run multi-bunker\" \"npm run dev\"",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "husky"
   },
   "dependencies": {
     "@nostr-dev-kit/ndk": "^2.14.32",
@@ -31,6 +32,8 @@
     "ws": "^8.13.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -39,6 +42,7 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
+    "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "prisma": "^6.10.1",
     "tailwindcss": "^4",

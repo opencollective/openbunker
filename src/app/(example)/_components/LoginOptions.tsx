@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import SecretKeyLogin from "@/app/(example)/_components/SecretKeyLogin";
 import { useNostr } from "@/app/(example)/_context/NostrContext";
@@ -12,10 +12,20 @@ export default function LoginOptions() {
   const { handleBunkerConnectionToken } = useNostr();
   const router = useRouter();
 
+  const handleOpenBunkerSuccess = useCallback(async (bunkerConnectionToken: string) => {
+    try {
+      const sk = generateSecretKey();
+      handleBunkerConnectionToken(bunkerConnectionToken, sk);
+      router.push("/example");
+    } catch (err) {
+      console.error("Failed to complete OpenBunker authentication:", err);
+    }
+  }, [handleBunkerConnectionToken, router]);
+
   // Set up the callback function for the popup
   useEffect(() => {
     // Define the callback function on the window object
-    (window as any).openBunkerCallback = (secretKey: string) => {
+    (window as { openBunkerCallback?: (secretKey: string) => void }).openBunkerCallback = (secretKey: string) => {
       handleOpenBunkerSuccess(secretKey);
     };
 
@@ -32,20 +42,10 @@ export default function LoginOptions() {
 
     return () => {
       // Clean up
-      delete (window as any).openBunkerCallback;
+      delete (window as { openBunkerCallback?: (secretKey: string) => void }).openBunkerCallback;
       window.removeEventListener("message", handleMessage);
     };
-  }, []);
-
-  const handleOpenBunkerSuccess = async (bunkerConnectionToken: string) => {
-    try {
-      const sk = generateSecretKey();
-      handleBunkerConnectionToken(bunkerConnectionToken, sk);
-      router.push("/example");
-    } catch (err) {
-      console.error("Failed to complete OpenBunker authentication:", err);
-    }
-  };
+  }, [handleOpenBunkerSuccess]);
 
   const handleOpenBunkerPopup = () => {
     console.log("handleOpenBunkerPopup");
@@ -91,7 +91,7 @@ export default function LoginOptions() {
           Choose Authentication Method
         </h2>
         <p className="text-gray-600">
-          Select how you'd like to authenticate with OpenBunker
+          Select how you&apos;d like to authenticate with OpenBunker
         </p>
       </div>
 

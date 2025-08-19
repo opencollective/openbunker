@@ -5,7 +5,7 @@ import { generateSecretKey, getPublicKey } from "nostr-tools";
 import { nip19 } from "nostr-tools";
 import { bytesToHex } from "@noble/hashes/utils";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createServerSupabaseClient();
     const {
@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
     // Generate a new Nostr key pair
     const secretKey = generateSecretKey();
     const publicKey = getPublicKey(secretKey);
-    const nsec = nip19.nsecEncode(secretKey);
     const npub = nip19.npubEncode(publicKey);
 
     // Create the key in the Keys table

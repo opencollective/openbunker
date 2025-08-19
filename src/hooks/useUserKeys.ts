@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface UserKey {
@@ -33,7 +33,7 @@ export function useUserKeys(): UseUserKeysReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchKeys = async () => {
+  const fetchKeys = useCallback(async () => {
     if (!user) {
       setKeys([]);
       return;
@@ -56,11 +56,11 @@ export function useUserKeys(): UseUserKeysReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchKeys();
-  }, [user]);
+  }, [user, fetchKeys]);
 
   return {
     keys,

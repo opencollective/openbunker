@@ -10,7 +10,6 @@ export default function UserKeys() {
   const { keys, loading, error, refetch } = useUserKeys();
   const [copied, setCopied] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
 
   const copyToClipboard = async (text: string, keyId: string) => {
     try {
@@ -140,7 +139,7 @@ export default function UserKeys() {
             No Keys Found
           </h3>
           <p className="text-gray-600 mb-4">
-            You haven't created any Nostr keys yet.
+            You haven&apos;t created any Nostr keys yet.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}

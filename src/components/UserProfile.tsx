@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
-import { User } from "@supabase/supabase-js";
 import SessionSelector from "./SessionSelector";
 
 interface NostrKey {
@@ -77,13 +77,12 @@ export default function UserProfile() {
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center space-x-4">
           <div className="relative">
-            <img
+            <Image
               src={user.user_metadata?.avatar_url || "/default-avatar.png"}
               alt="Profile"
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-full border-2 border-gray-200"
-              onError={(e) => {
-                e.currentTarget.src = "/default-avatar.png";
-              }}
             />
             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
           </div>

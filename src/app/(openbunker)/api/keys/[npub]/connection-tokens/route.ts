@@ -50,7 +50,14 @@ export async function GET(
     });
 
     // Transform the data to be more frontend-friendly
-    const tokens = connectionTokens.map((token: any) => ({
+    const tokens = connectionTokens.map((token: {
+      token: string;
+      npub: string;
+      subNpub: string | null;
+      timestamp: bigint;
+      expiry: bigint;
+      jsonData: string | null;
+    }) => ({
       token: token.token,
       npub: token.npub,
       subNpub: token.subNpub,

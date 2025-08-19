@@ -7,7 +7,7 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import { SimplePool, Event, Filter, getPublicKey } from "nostr-tools";
+import { SimplePool, Event, Filter } from "nostr-tools";
 import { BunkerSigner, parseBunkerInput } from "nostr-tools/nip46";
 
 interface NostrContextType {
@@ -28,7 +28,7 @@ interface NostrContextType {
   events: Event[];
   userProfile: Event | null;
   fetchUserProfile: () => Promise<void>;
-  updateUserProfile: (profileData: any) => Promise<void>;
+  updateUserProfile: (profileData: Record<string, string>) => Promise<void>;
   sendEvent: (event: Event) => void;
   subscribeToEvents: (filter: Filter) => void;
   clearEvents: () => void;
@@ -85,14 +85,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         pool.close(relays);
       }
     };
-  }, []);
-
-  // Fetch user profile when connected and userPublicKey is available
-  useEffect(() => {
-    if (isConnected && userPublicKey && pool) {
-      fetchUserProfile();
-    }
-  }, [isConnected, userPublicKey, pool]);
+  }, [pool]);
 
   const fetchUserProfile = useCallback(async () => {
     if (!pool || !userPublicKey) return;
@@ -117,8 +110,15 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pool, userPublicKey]);
 
+  // Fetch user profile when connected and userPublicKey is available
+  useEffect(() => {
+    if (isConnected && userPublicKey && pool) {
+      fetchUserProfile();
+    }
+  }, [isConnected, userPublicKey, pool, fetchUserProfile]);
+
   const updateUserProfile = useCallback(
-    async (profileData: any) => {
+    async (profileData: Record<string, string>) => {
       if (!bunkerSigner || bunkerStatus !== "connected") {
         throw new Error("Bunker not connected");
       }

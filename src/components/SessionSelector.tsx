@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { Session } from "@supabase/supabase-js";
 import OpenBunkerLogin from "./OpenBunkerLogin";
@@ -115,12 +116,14 @@ export default function SessionSelector({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="relative">
-              <img
+              <Image
                 src={
                   currentSession.user.user_metadata?.avatar_url ||
                   "/default-avatar.png"
                 }
                 alt="Profile"
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-full border-2 border-indigo-200"
                 onError={(e) => {
                   e.currentTarget.src = "/default-avatar.png";
