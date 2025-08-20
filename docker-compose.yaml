@@ -1,22 +1,22 @@
 services:
   # Multi-Bunker Server
-  bunker-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.server
-    container_name: openbunker-server
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - NOSTR_RELAYS=wss://relay.nsec.app
-      # Add other environment variables as needed
-    env_file:
-      - .env.local
-    healthcheck:
-      test: ["CMD", "true"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # bunker-server:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.server
+  #   container_name: openbunker-server
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_ENV=production
+  #     - NOSTR_RELAYS=wss://relay.nsec.app
+  #     # Add other environment variables as needed
+  #   env_file:
+  #     - .env.local
+  #   healthcheck:
+  #     test: ["CMD", "true"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
   # Next.js Frontend
   frontend:
@@ -26,13 +26,12 @@ services:
       args:
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - DATABASE_URL=${DATABASE_URL}
     container_name: openbunker-frontend
     restart: unless-stopped
-    depends_on:
-      bunker-server:
-        condition: service_healthy
-    env_file:
-      - .env.local
+    # depends_on:
+    #   bunker-server:
+    #     condition: service_healthy
     environment:
       - NODE_ENV=production
     ports:
