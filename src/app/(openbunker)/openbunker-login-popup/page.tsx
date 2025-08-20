@@ -54,21 +54,17 @@ export default function OpenBunkerLoginPopup() {
   const handlePopupCallback = (bunkerConnectionToken: string) => {
     // Check if we're in a popup window
     if (window.opener && !window.opener.closed) {
-      // We're in a popup - call parent callback
+      // We're in a popup - communicate with parent via postMessage
       try {
-        // Try to call a callback function on the parent window
-        if (typeof window.opener.openBunkerCallback === "function") {
-          window.opener.openBunkerCallback(bunkerConnectionToken);
-        } else {
-          // Fallback: post message to parent
-          window.opener.postMessage(
-            {
-              type: "openbunker-auth-success",
-              secretKey: bunkerConnectionToken,
-            },
-            window.location.origin,
-          );
-        }
+        // Use postMessage as the primary communication method to avoid cross-origin issues
+        window.opener.postMessage(
+          {
+            type: "openbunker-auth-success",
+            secretKey: bunkerConnectionToken,
+          },
+          "*" // Allow any origin for cross-origin communication
+        );
+        
         // Close the popup
         window.close();
       } catch (err) {
