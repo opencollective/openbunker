@@ -101,13 +101,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!supabase) {
         throw new Error("Supabase client not available");
       }
-
+      const baseUrl = process.env.NEXT_PUBLIC_DEPLOY_URL || window.location.origin;
       const { error, data } = await supabase.auth.signInWithOAuth({
         provider: "discord",
         options: {
-          redirectTo:
-            "https://vwlhjfwabbobhbopmmxa.supabase.co/auth/v1/callback",
-          // skipBrowserRedirect: true
+          redirectTo: `${baseUrl}`,
         },
       });
 
