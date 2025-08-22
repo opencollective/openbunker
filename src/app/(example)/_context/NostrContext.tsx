@@ -88,7 +88,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   }, [pool]);
 
   const fetchUserProfile = useCallback(async () => {
-    if (!pool || !userPublicKey) return;
+    if (!isConnected ||!pool || !userPublicKey || userProfile) return;
 
     try {
       console.log("Fetching user profile for:", userPublicKey);
@@ -101,8 +101,6 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       const events = await pool.querySync(relays, filter);
       if (events.length > 0) {
         setUserProfile(events[0]);
-      } else {
-        setUserProfile(null);
       }
     } catch (err) {
       console.error("Failed to fetch user profile:", err);
@@ -112,10 +110,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user profile when connected and userPublicKey is available
   useEffect(() => {
-    if (isConnected && userPublicKey && pool) {
       fetchUserProfile();
-    }
-  }, [isConnected, userPublicKey, pool, fetchUserProfile]);
+  }, []);
 
   const updateUserProfile = useCallback(
     async (profileData: Record<string, string>) => {

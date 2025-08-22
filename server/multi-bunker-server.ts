@@ -206,21 +206,6 @@ class MultiBunkerServer {
         tokensByNpub.get(token.npub)!.push(token);
       }
 
-      // Process each key
-      for (const key of keys) {
-        const hasValidTokens =
-          tokensByNpub.has(key.npub) && tokensByNpub.get(key.npub)!.length > 0;
-
-        if (hasValidTokens) {
-          console.log(
-            `Key ${key.npub} has valid connection tokens - will start bunker`,
-          );
-        } else {
-          console.log(
-            `Key ${key.npub} has no valid connection tokens - will start bunker anyway`,
-          );
-        }
-      }
 
       // Store the data for bunker creation
       this.keys = keys;
@@ -334,7 +319,7 @@ class MultiBunkerServer {
   }
 
   private setupPeriodicScanning() {
-    // Scan for new keys/tokens every 5 minutes
+    // Scan for new keys/tokens every 5 seconds
     setInterval(
       async () => {
         console.log("Periodic database scan...");
@@ -345,7 +330,7 @@ class MultiBunkerServer {
           console.error("Error in periodic scan:", error);
         }
       },
-      5 * 60 * 1000,
+      5 * 1000,
     );
   }
 

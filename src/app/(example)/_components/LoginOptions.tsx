@@ -24,11 +24,7 @@ export default function LoginOptions() {
 
   // Set up the callback function for the popup
   useEffect(() => {
-    // Define the callback function on the window object
-    (window as { openBunkerCallback?: (secretKey: string) => void }).openBunkerCallback = (secretKey: string) => {
-      handleOpenBunkerSuccess(secretKey);
-    };
-
+    
     // Set up message listener as fallback
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
@@ -41,8 +37,6 @@ export default function LoginOptions() {
     window.addEventListener("message", handleMessage);
 
     return () => {
-      // Clean up
-      delete (window as { openBunkerCallback?: (secretKey: string) => void }).openBunkerCallback;
       window.removeEventListener("message", handleMessage);
     };
   }, [handleOpenBunkerSuccess]);
@@ -58,7 +52,6 @@ export default function LoginOptions() {
 
     if (popupWindow) {
       setPopup(popupWindow);
-
       // Check if popup is closed
       const checkClosed = setInterval(() => {
         console.log("checkClosed", popupWindow.closed);
