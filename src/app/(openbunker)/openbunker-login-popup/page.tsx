@@ -42,7 +42,7 @@ export default function OpenBunkerLoginPopup() {
     const token = "31231241";
     // Now we have both session and key, proceed with authentication
     handlePopupCallback(
-      `bunker://${hex}?relay=${process.env.NEXT_PUBLIC_BUNKER_RELAYS}&secret=${token}`,
+      `bunker://${hex}?relay=${encodeURIComponent(process.env.NEXT_PUBLIC_BUNKER_RELAYS ?? "wss://relay.nsec.app")}&secret=${token}`,
     );
   };
 
