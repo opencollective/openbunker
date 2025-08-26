@@ -6,7 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function OpenBunkerLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { authenticateWithOpenBunker } = useAuth();
+  const [showMagicLinkForm, setShowMagicLinkForm] = useState(false);
+  const [email, setEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const { authenticateWithOpenBunker, sendMagicLink } = useAuth();
 
   const handleOpenBunkerAuth = async () => {
     setLoading(true);
@@ -21,6 +24,27 @@ export default function OpenBunkerLogin() {
     }
   };
 
+  const handleSendMagicLink = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      await sendMagicLink(email);
+      setMagicLinkSent(true);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send magic link");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -28,7 +52,7 @@ export default function OpenBunkerLogin() {
           Authenticate with OpenBunker
         </h2>
         <p className="text-gray-600">
-          Use Discord OAuth to get a new Nostr key
+          Choose your preferred authentication method
         </p>
         {process.env.NODE_ENV === "development" && (
           <div className="mt-2 p-2 bg-yellow-100 rounded-lg">
@@ -73,29 +97,101 @@ export default function OpenBunkerLogin() {
           </span>
         </button>
 
-        {loading && (
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Authentication in progress...
-              {process.env.NODE_ENV === "development" && (
-                <span className="block text-xs text-yellow-600 mt-1">
-                  🧪 Development mode: OAuth is simulated
-                </span>
-              )}
-            </p>
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">or</span>
+          </div>
+        </div>
+
+        {/* Magic Link Login Option */}
+        {!showMagicLinkForm ? (
+          <button
+            onClick={() => setShowMagicLinkForm(true)}
+            disabled={loading}
+            className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-3"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+              />
+            </svg>
+            <span>Login with Magic Link</span>
+          </button>
+        ) : (
+          <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={magicLinkSent}
+              />
+            </div>
+
+            {!magicLinkSent ? (
+              <button
+                onClick={handleSendMagicLink}
+                disabled={loading || !email}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                {loading ? "Sending..." : "Send Magic Link"}
+              </button>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500">
+                  Check your email for a one-time password.
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowMagicLinkForm(false)}
+              className="w-full text-gray-500 hover:text-gray-700 text-sm"
+            >
+              Back to options
+            </button>
           </div>
         )}
       </div>
 
+      {loading && (
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Authentication in progress...
+            {process.env.NODE_ENV === "development" && (
+              <span className="block text-xs text-yellow-600 mt-1">
+                🧪 Development mode: OAuth is simulated
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
       <div className="text-center">
         <p className="text-xs text-gray-500">
-          <strong>How it works:</strong> You&apos;ll be redirected to Discord for
-          OAuth, then receive a new Nostr key from OpenBunker.
+          <strong>How it works:</strong> Choose between Discord OAuth for a new Nostr key or use a magic link sent to your email.
         </p>
         {process.env.NODE_ENV === "development" && (
           <p className="text-xs text-yellow-600 mt-1">
-            <strong>Dev mode:</strong> OAuth flow is simulated in a popup window
-            for realistic testing.
+            <strong>Dev mode:</strong> OAuth flow is simulated in a popup window for realistic testing. Magic links are logged to console.
           </p>
         )}
       </div>

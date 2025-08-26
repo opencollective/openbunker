@@ -12,6 +12,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   authenticateWithOpenBunker: () => Promise<string>;
   checkOpenBunkerCallback: (secretKey: string) => Promise<void>;
+  sendMagicLink: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -162,6 +163,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const sendMagicLink = async (email: string) => {
+    try {
+      setLoading(true);
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error("Supabase client not available");
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_DEPLOY_URL || window.location.origin}`
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to send magic link");
+      }
+
+      console.log("Magic link sent to:", email);
+    } catch (error) {
+      console.error("Send magic link error:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       setLoading(true);
@@ -189,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     authenticateWithOpenBunker,
     checkOpenBunkerCallback,
+    sendMagicLink,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
