@@ -8,61 +8,52 @@ const TOKEN_SIZE = 16;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name } = body;
-
+    const { email, name, scope } = body;
+    let message = '';
+    let existingUser = false;
     // Validate required fields
     if (!email) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Check if user with this email already exists in the system
+    // Check if user with this email already exists in the system with matching scope
     const existingKey = await prisma.keys.findFirst({
-      where: { email: email },
-    });
-
-    if (existingKey) {
-      // User exists, redirect to sign in
-      const response = NextResponse.json({
-        success: false,
-        message:
-          'User with this email already exists. Please sign in to continue.',
-        redirectUrl: `${process.env.NEXT_PUBLIC_OPENBUNKER_URL}/openbunker-login-popup`,
-        existingUser: true,
-      });
-
-      // Add CORS headers
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      response.headers.set(
-        'Access-Control-Allow-Methods',
-        'GET, POST, OPTIONS'
-      );
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-
-      return response;
-    }
-
-    // Generate a new Nostr key pair for the new user
-    const secretKey = generateSecretKey();
-    const publicKey = getPublicKey(secretKey);
-    const npub = nip19.npubEncode(publicKey);
-
-    // Generate a connection token
-    const connectionToken = randomBytes(TOKEN_SIZE).toString('hex');
-
-    // Create the key in the database
-    const newKey = await prisma.keys.create({
-      data: {
-        npub: npub,
-        name: name || 'My Key',
+      where: {
         email: email,
-        relays: [],
-        enckey: '',
-        profile: { name: name || 'My Key' },
-        ncryptsec: Buffer.from(secretKey).toString('hex'),
+        scopeSlug: scope,
       },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let keyToReturn: any = existingKey;
+    if (!existingKey) {
+      message = 'New user key created successfully';
+      // Generate a new Nostr key pair for the new user
+      const secretKey = generateSecretKey();
+      const publicKey = getPublicKey(secretKey);
+      const npub = nip19.npubEncode(publicKey);
+      // Create the key in the database
+      const newKey = await prisma.keys.create({
+        data: {
+          npub: npub,
+          name: name || 'My Key',
+          email: email,
+          relays: [],
+          enckey: '',
+          profile: { name: name || 'My Key' },
+          ncryptsec: Buffer.from(secretKey).toString('hex'),
+          scopeSlug: scope,
+        },
+      });
+      keyToReturn = newKey;
+      existingUser = false;
+    } else {
+      message = 'Existing user key found';
+      existingUser = true;
+    }
+    const connectionToken = randomBytes(TOKEN_SIZE).toString('hex');
     // Create a connection token record
+    const npub = keyToReturn?.npub;
     await prisma.connectTokens.create({
       data: {
         token: connectionToken,
@@ -70,7 +61,7 @@ export async function POST(request: NextRequest) {
         timestamp: BigInt(Date.now()),
         expiry: BigInt(Date.now() + 600000), // 10 minutes
         subNpub: null,
-        jsonData: JSON.stringify({ email, name }),
+        jsonData: JSON.stringify({ email, name, scope }),
       },
     });
 
@@ -78,16 +69,17 @@ export async function POST(request: NextRequest) {
     const relay = encodeURIComponent(
       process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app'
     );
-    const bunkerConnectionToken = `bunker://${publicKey}?relay=${relay}&secret=${connectionToken}`;
+    const publicKey = nip19.decode(keyToReturn.npub || '');
+    const bunkerConnectionToken = `bunker://${publicKey.data}?relay=${relay}&secret=${connectionToken}`;
 
     const response = NextResponse.json({
       success: true,
-      message: 'New user key created successfully',
+      message,
       bunkerConnectionToken,
       npub,
       connectionToken,
-      keyId: newKey.npub,
-      existingUser: false,
+      existingUser,
+      scopeSlug: scope || null,
     });
 
     // Add CORS headers
@@ -127,6 +119,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
+    const scope = searchParams.get('scope');
 
     if (!email) {
       const response = NextResponse.json(
@@ -145,9 +138,12 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    // Check if user exists
+    // Check if user exists with matching scope
     const existingKey = await prisma.keys.findFirst({
-      where: { email: email },
+      where: {
+        email: email,
+        scopeSlug: scope,
+      },
     });
 
     if (existingKey) {
@@ -155,7 +151,8 @@ export async function GET(request: NextRequest) {
         exists: true,
         npub: existingKey.npub,
         name: existingKey.name,
-        message: 'User with this email already exists',
+        scopeSlug: existingKey.scopeSlug,
+        message: 'User with this email and scope already exists',
       });
 
       // Add CORS headers
@@ -171,7 +168,7 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json({
       exists: false,
-      message: 'No user found with this email',
+      message: 'No user found with this email and scope',
     });
 
     // Add CORS headers

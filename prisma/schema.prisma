@@ -65,10 +65,12 @@ model Keys {
   ncryptsec String?  
   localKey String?
   email    String?
+  scopeSlug String? // Associate keys with specific scopes
 
   // Relation to UserKeys
   userKeys UserKeys[]
   @@index([npub])
+  @@index([scopeSlug])
 }
 
 model Apps {

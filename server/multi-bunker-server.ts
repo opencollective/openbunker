@@ -196,20 +196,21 @@ class MultiBunkerServer {
 
     // Check if we have a valid token for this connection
     if (params.method === 'connect') {
+      const remoteNpub = nip19.npubEncode(params.pubkey);
       // the signer-side pubkey
       const signerPubkey = params.params[0];
-      const signerNpub = await nip19.npubEncode(signerPubkey);
+      const signerNpub = nip19.npubEncode(signerPubkey);
       const token = params.params[1];
 
       // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
       const pubkeySession = await prisma.sessions.findFirst({
         where: {
           npub: signerNpub,
-          sessionNpub: npub,
+          sessionNpub: remoteNpub,
         },
       });
       if (pubkeySession) {
-        console.log('Found existing session for ', npub, signerPubkey);
+        console.log('Found existing session for ', remoteNpub, signerPubkey);
         return true;
       }
 
@@ -217,7 +218,7 @@ class MultiBunkerServer {
       const dbToken = await prisma.connectTokens.findFirst({
         where: {
           token: token,
-          npub: npub,
+          npub: signerNpub,
           expiry: {
             gt: BigInt(Date.now()),
           },
@@ -237,7 +238,7 @@ class MultiBunkerServer {
         await prisma.sessions.create({
           data: {
             npub: signerNpub,
-            sessionNpub: npub,
+            sessionNpub: remoteNpub,
             expiresAt: BigInt(Date.now() + 1000 * 60 * 60), // 30 days
           },
         });
@@ -248,8 +249,21 @@ class MultiBunkerServer {
       }
     } else {
       // Check if there is a session active
+      const remoteNpub = nip19.npubEncode(params.pubkey);
+      const session = await prisma.sessions.findFirst({
+        where: {
+          npub: npub,
+          sessionNpub: remoteNpub,
+        },
+      });
+      if (session) {
+        console.log('Found existing session for ', npub, params.pubkey);
+        return true;
+      } else {
+        console.log('No session found for ', npub, remoteNpub);
+        return false;
+      }
     }
-    return false;
   }
 
   private setupPeriodicScanning() {
