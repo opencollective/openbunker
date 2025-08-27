@@ -1,11 +1,11 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
-  if (request.nextUrl.pathname.startsWith("/example")) {
+  if (request.nextUrl.pathname.startsWith('/example')) {
     return supabaseResponse;
   }
 
@@ -19,17 +19,17 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
+            request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, options)
           );
         },
       },
-    },
+    }
   );
 
   // IMPORTANT: Avoid writing any logic between createServerClient and
@@ -43,14 +43,14 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Define protected routes that require authentication
-  const protectedRoutes = ["/profile", "/settings"];
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    path.startsWith(route),
+  const protectedRoutes = ['/profile', '/settings'];
+  const isProtectedRoute = protectedRoutes.some(route =>
+    path.startsWith(route)
   );
 
   // If accessing a protected route without authentication, redirect to home
   if (isProtectedRoute && !user) {
-    const homeUrl = new URL("/", request.url);
+    const homeUrl = new URL('/', request.url);
     return NextResponse.redirect(homeUrl);
   }
 
@@ -67,6 +67,6 @@ export const config = {
      * - example (example routes)
      * Feel free to modify this pattern to include more paths.
      */
-    "/((?!_next/static|_next/image|favicon.ico|example|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    '/((?!_next/static|_next/image|favicon.ico|example|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

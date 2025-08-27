@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
   const { user, loading, signOut } = useAuth();
@@ -46,14 +46,14 @@ export default function ProfilePage() {
               <span className="text-white text-2xl font-semibold">
                 {user.user_metadata?.full_name?.charAt(0) ||
                   user.email?.charAt(0)?.toUpperCase() ||
-                  "U"}
+                  'U'}
               </span>
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-semibold text-gray-900">
                 {user.user_metadata?.full_name ||
                   user.user_metadata?.name ||
-                  "User"}
+                  'User'}
               </h2>
               <p className="text-gray-600">{user.email}</p>
               {user.user_metadata?.provider && (
@@ -114,7 +114,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600 font-medium">Email Verified</span>
               <span className="font-medium text-gray-900">
-                {user.email_confirmed_at ? "Yes" : "No"}
+                {user.email_confirmed_at ? 'Yes' : 'No'}
               </span>
             </div>
 
@@ -147,7 +147,7 @@ export default function ProfilePage() {
 
         <div className="mt-8 text-center">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push('/')}
             className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-200"
           >
             ← Back to Home

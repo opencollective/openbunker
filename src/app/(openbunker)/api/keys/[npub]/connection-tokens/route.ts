@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { prisma } from "@/lib/db";
-import { randomBytes } from "crypto";
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { prisma } from '@/lib/db';
+import { randomBytes } from 'crypto';
 
 const TOKEN_SIZE = 16;
 const TOKEN_TTL = 600000; // 10 minutes
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ npub: string }> },
+  { params }: { params: Promise<{ npub: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -18,7 +18,7 @@ export async function GET(
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { npub } = await params;
@@ -34,8 +34,8 @@ export async function GET(
 
     if (!userKey) {
       return NextResponse.json(
-        { error: "Key not found or access denied" },
-        { status: 404 },
+        { error: 'Key not found or access denied' },
+        { status: 404 }
       );
     }
 
@@ -45,41 +45,43 @@ export async function GET(
         npub: npub,
       },
       orderBy: {
-        timestamp: "desc",
+        timestamp: 'desc',
       },
     });
 
     // Transform the data to be more frontend-friendly
-    const tokens = connectionTokens.map((token: {
-      token: string;
-      npub: string;
-      subNpub: string | null;
-      timestamp: bigint;
-      expiry: bigint;
-      jsonData: string | null;
-    }) => ({
-      token: token.token,
-      npub: token.npub,
-      subNpub: token.subNpub,
-      timestamp: Number(token.timestamp),
-      expiry: Number(token.expiry),
-      jsonData: token.jsonData ? JSON.parse(token.jsonData) : null,
-      isExpired: Number(token.expiry) < Date.now(),
-    }));
+    const tokens = connectionTokens.map(
+      (token: {
+        token: string;
+        npub: string;
+        subNpub: string | null;
+        timestamp: bigint;
+        expiry: bigint;
+        jsonData: string | null;
+      }) => ({
+        token: token.token,
+        npub: token.npub,
+        subNpub: token.subNpub,
+        timestamp: Number(token.timestamp),
+        expiry: Number(token.expiry),
+        jsonData: token.jsonData ? JSON.parse(token.jsonData) : null,
+        isExpired: Number(token.expiry) < Date.now(),
+      })
+    );
 
     return NextResponse.json({ tokens });
   } catch (error) {
-    console.error("Error fetching connection tokens:", error);
+    console.error('Error fetching connection tokens:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ npub: string }> },
+  { params }: { params: Promise<{ npub: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -89,7 +91,7 @@ export async function POST(
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { npub } = await params;
@@ -107,13 +109,13 @@ export async function POST(
 
     if (!userKey) {
       return NextResponse.json(
-        { error: "Key not found or access denied" },
-        { status: 404 },
+        { error: 'Key not found or access denied' },
+        { status: 404 }
       );
     }
 
     // Generate a new connection token
-    const token = randomBytes(TOKEN_SIZE).toString("hex");
+    const token = randomBytes(TOKEN_SIZE).toString('hex');
     const timestamp = BigInt(Date.now());
     const expiry = BigInt(Date.now() + TOKEN_TTL);
 
@@ -142,17 +144,17 @@ export async function POST(
 
     return NextResponse.json({ token: responseToken });
   } catch (error) {
-    console.error("Error creating connection token:", error);
+    console.error('Error creating connection token:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ npub: string }> },
+  { params }: { params: Promise<{ npub: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -162,17 +164,17 @@ export async function DELETE(
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { npub } = await params;
     const { searchParams } = new URL(request.url);
-    const token = searchParams.get("token");
+    const token = searchParams.get('token');
 
     if (!token) {
       return NextResponse.json(
-        { error: "Token parameter is required" },
-        { status: 400 },
+        { error: 'Token parameter is required' },
+        { status: 400 }
       );
     }
 
@@ -187,8 +189,8 @@ export async function DELETE(
 
     if (!userKey) {
       return NextResponse.json(
-        { error: "Key not found or access denied" },
-        { status: 404 },
+        { error: 'Key not found or access denied' },
+        { status: 404 }
       );
     }
 
@@ -201,7 +203,7 @@ export async function DELETE(
     });
 
     if (!tokenRecord) {
-      return NextResponse.json({ error: "Token not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Token not found' }, { status: 404 });
     }
 
     // Delete the token
@@ -213,10 +215,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting connection token:", error);
+    console.error('Error deleting connection token:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

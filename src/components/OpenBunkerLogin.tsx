@@ -1,49 +1,50 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function OpenBunkerLogin() {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [showMagicLinkForm, setShowMagicLinkForm] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const { authenticateWithOpenBunker, sendMagicLink } = useAuth();
 
   const handleOpenBunkerAuth = async () => {
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       const authUrl = await authenticateWithOpenBunker();
-      console.log("authUrl", authUrl);
+      console.log('authUrl', authUrl);
     } catch {
-      setError("Failed to start OpenBunker authentication. Please try again.");
+      setError('Failed to start OpenBunker authentication. Please try again.');
       setLoading(false);
     }
   };
 
   const handleSendMagicLink = async () => {
-    if (!email || !email.includes("@")) {
-      setError("Please enter a valid email address");
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address');
       return;
     }
 
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       await sendMagicLink(email);
       setMagicLinkSent(true);
-      setError("");
+      setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send magic link");
+      setError(
+        err instanceof Error ? err.message : 'Failed to send magic link'
+      );
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="space-y-6">
@@ -54,7 +55,7 @@ export default function OpenBunkerLogin() {
         <p className="text-gray-600">
           Choose your preferred authentication method
         </p>
-        {process.env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === 'development' && (
           <div className="mt-2 p-2 bg-yellow-100 rounded-lg">
             <p className="text-sm text-yellow-800">
               🧪 Development mode: OAuth flow will be simulated
@@ -90,10 +91,10 @@ export default function OpenBunkerLogin() {
           </svg>
           <span>
             {loading
-              ? process.env.NODE_ENV === "development"
-                ? "Opening simulated OAuth..."
-                : "Opening OpenBunker..."
-              : "Start Discord OAuth"}
+              ? process.env.NODE_ENV === 'development'
+                ? 'Opening simulated OAuth...'
+                : 'Opening OpenBunker...'
+              : 'Start Discord OAuth'}
           </span>
         </button>
 
@@ -132,14 +133,17 @@ export default function OpenBunkerLogin() {
         ) : (
           <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Email Address
               </label>
               <input
                 type="email"
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={magicLinkSent}
@@ -152,7 +156,7 @@ export default function OpenBunkerLogin() {
                 disabled={loading || !email}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
-                {loading ? "Sending..." : "Send Magic Link"}
+                {loading ? 'Sending...' : 'Send Magic Link'}
               </button>
             ) : (
               <div className="space-y-4">
@@ -176,7 +180,7 @@ export default function OpenBunkerLogin() {
         <div className="text-center">
           <p className="text-sm text-gray-600">
             Authentication in progress...
-            {process.env.NODE_ENV === "development" && (
+            {process.env.NODE_ENV === 'development' && (
               <span className="block text-xs text-yellow-600 mt-1">
                 🧪 Development mode: OAuth is simulated
               </span>
@@ -187,11 +191,13 @@ export default function OpenBunkerLogin() {
 
       <div className="text-center">
         <p className="text-xs text-gray-500">
-          <strong>How it works:</strong> Choose between Discord OAuth for a new Nostr key or use a magic link sent to your email.
+          <strong>How it works:</strong> Choose between Discord OAuth for a new
+          Nostr key or use a magic link sent to your email.
         </p>
-        {process.env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === 'development' && (
           <p className="text-xs text-yellow-600 mt-1">
-            <strong>Dev mode:</strong> OAuth flow is simulated in a popup window for realistic testing. Magic links are logged to console.
+            <strong>Dev mode:</strong> OAuth flow is simulated in a popup window
+            for realistic testing. Magic links are logged to console.
           </p>
         )}
       </div>

@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
+import { Event, Filter, SimplePool } from 'nostr-tools';
+import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
-  useCallback,
-} from "react";
-import { SimplePool, Event, Filter } from "nostr-tools";
-import { BunkerSigner, parseBunkerInput } from "nostr-tools/nip46";
+} from 'react';
 
 interface NostrContextType {
   localSecretKey: Uint8Array | null;
@@ -18,11 +18,11 @@ interface NostrContextType {
   setLocalSecretKey: (sk: Uint8Array) => void;
   handleBunkerConnectionToken: (
     bunkerConnectionToken: string,
-    localSecretKey: Uint8Array,
+    localSecretKey: Uint8Array
   ) => void;
 
   isConnected: boolean;
-  bunkerStatus: "disconnected" | "connecting" | "connected" | "error";
+  bunkerStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
   bunkerError: string | null;
   bunkerSigner: BunkerSigner | null;
   events: Event[];
@@ -37,7 +37,7 @@ interface NostrContextType {
 
 const relays = [
   // 'wss://relay.damus.io',
-  "wss://relay.chorus.community",
+  'wss://relay.chorus.community',
   // 'wss://nos.lol',
   // 'wss://relay.snort.social',
   // 'wss://nostr.wine',
@@ -56,8 +56,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     string | null
   >(null);
   const [bunkerStatus, setBunkerStatus] = useState<
-    "disconnected" | "connecting" | "connected" | "error"
-  >("disconnected");
+    'disconnected' | 'connecting' | 'connected' | 'error'
+  >('disconnected');
   const [bunkerError, setBunkerError] = useState<string | null>(null);
   const [bunkerSigner, setBunkerSigner] = useState<BunkerSigner | null>(null);
   const [userProfile, setUserProfile] = useState<Event | null>(null);
@@ -66,14 +66,14 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initPool = async () => {
       try {
-        const { SimplePool } = await import("nostr-tools/pool");
+        const { SimplePool } = await import('nostr-tools/pool');
         const newPool = new SimplePool();
         setPool(newPool);
         setIsConnected(true);
         setError(null);
       } catch (err) {
-        console.error("Failed to initialize Nostr pool:", err);
-        setError("Failed to connect to Nostr relays");
+        console.error('Failed to initialize Nostr pool:', err);
+        setError('Failed to connect to Nostr relays');
         setIsConnected(false);
       }
     };
@@ -88,10 +88,10 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   }, [pool]);
 
   const fetchUserProfile = useCallback(async () => {
-    if (!isConnected ||!pool || !userPublicKey || userProfile) return;
+    if (!isConnected || !pool || !userPublicKey || userProfile) return;
 
     try {
-      console.log("Fetching user profile for:", userPublicKey);
+      console.log('Fetching user profile for:', userPublicKey);
       const filter: Filter = {
         kinds: [0],
         authors: [userPublicKey],
@@ -103,20 +103,20 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         setUserProfile(events[0]);
       }
     } catch (err) {
-      console.error("Failed to fetch user profile:", err);
-      setError("Failed to fetch user profile");
+      console.error('Failed to fetch user profile:', err);
+      setError('Failed to fetch user profile');
     }
-  }, [pool, userPublicKey]);
+  }, [pool, userPublicKey, isConnected, userProfile]);
 
   // Fetch user profile when connected and userPublicKey is available
   useEffect(() => {
-      fetchUserProfile();
+    fetchUserProfile();
   }, []);
 
   const updateUserProfile = useCallback(
     async (profileData: Record<string, string>) => {
-      if (!bunkerSigner || bunkerStatus !== "connected") {
-        throw new Error("Bunker not connected");
+      if (!bunkerSigner || bunkerStatus !== 'connected') {
+        throw new Error('Bunker not connected');
       }
 
       try {
@@ -131,61 +131,61 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         const result = pool?.publish(relays, event);
         if (result) {
           const relayResults = await Promise.all(result);
-          console.log("Relay results:", relayResults);
+          console.log('Relay results:', relayResults);
         }
         setUserProfile(event);
-        console.log("Profile updated successfully");
+        console.log('Profile updated successfully');
       } catch (err) {
-        console.error("Failed to update profile:", err);
-        throw new Error("Failed to update profile");
+        console.error('Failed to update profile:', err);
+        throw new Error('Failed to update profile');
       }
     },
-    [bunkerSigner, bunkerStatus, pool],
+    [bunkerSigner, bunkerStatus, pool]
   );
 
   const handleBunkerConnectionToken = useCallback(
     async (newBunkerConnectionToken: string, newLocalSecretKey: Uint8Array) => {
       setBunkerConnectionToken(newBunkerConnectionToken);
       setLocalSecretKey(newLocalSecretKey);
-      setBunkerStatus("connecting");
+      setBunkerStatus('connecting');
       setBunkerError(null);
 
       try {
         // parse a bunker URI
         const bunkerPointer = await parseBunkerInput(newBunkerConnectionToken);
         if (!bunkerPointer) {
-          throw new Error("Invalid bunker input:" + newBunkerConnectionToken);
+          throw new Error('Invalid bunker input:' + newBunkerConnectionToken);
         }
-        console.log("Bunker pubkey:", bunkerPointer.pubkey);
+        console.log('Bunker pubkey:', bunkerPointer.pubkey);
         setUserPublicKey(bunkerPointer.pubkey);
         let newPool = pool;
         if (newPool === null) {
           newPool = new SimplePool();
           setPool(newPool);
-          console.log("Pool initialized");
+          console.log('Pool initialized');
           setIsConnected(true);
           setError(null);
         }
-        console.log("Bunker pointer:", bunkerPointer);
+        console.log('Bunker pointer:', bunkerPointer);
         console.log(bunkerPointer.relays);
         const bunker = new BunkerSigner(newLocalSecretKey, bunkerPointer, {
           pool: newPool,
         });
         setBunkerSigner(bunker);
         await bunker.connect();
-        console.log("Bunker connected");
-        setBunkerStatus("connected");
+        console.log('Bunker connected');
+        setBunkerStatus('connected');
         setIsConnected(true);
       } catch (err) {
-        console.error("Failed to connect to bunker:", err);
-        setBunkerStatus("error");
+        console.error('Failed to connect to bunker:', err);
+        setBunkerStatus('error');
         setBunkerError(
-          err instanceof Error ? err.message : "Failed to connect to bunker",
+          err instanceof Error ? err.message : 'Failed to connect to bunker'
         );
         setIsConnected(false);
       }
     },
-    [pool],
+    [pool]
   );
 
   // Subscribe to events
@@ -196,11 +196,11 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       try {
         const sub = pool.subscribe(relays, filter, {
           onevent(event) {
-            console.log("Received Nostr event:", event);
-            setEvents((prev) => [event, ...prev.slice(0, 99)]); // Keep last 100 events
+            console.log('Received Nostr event:', event);
+            setEvents(prev => [event, ...prev.slice(0, 99)]); // Keep last 100 events
           },
           oneose() {
-            console.log("Subscription ended");
+            console.log('Subscription ended');
           },
         });
 
@@ -208,11 +208,11 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
           sub.close();
         };
       } catch (err) {
-        console.error("Failed to subscribe to events:", err);
-        setError("Failed to subscribe to Nostr events");
+        console.error('Failed to subscribe to events:', err);
+        setError('Failed to subscribe to Nostr events');
       }
     },
-    [pool],
+    [pool]
   );
 
   // Send event
@@ -221,21 +221,21 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       if (!pool) return;
 
       const relays = [
-        "wss://relay.damus.io",
-        "wss://nos.lol",
-        "wss://relay.snort.social",
-        "wss://nostr.wine",
+        'wss://relay.damus.io',
+        'wss://nos.lol',
+        'wss://relay.snort.social',
+        'wss://nostr.wine',
       ];
 
       try {
         await pool.publish(relays, event);
-        console.log("Event published successfully");
+        console.log('Event published successfully');
       } catch (err) {
-        console.error("Failed to publish event:", err);
-        setError("Failed to publish event");
+        console.error('Failed to publish event:', err);
+        setError('Failed to publish event');
       }
     },
-    [pool],
+    [pool]
   );
 
   // Clear events
@@ -272,7 +272,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 export function useNostr() {
   const context = useContext(NostrContext);
   if (context === undefined) {
-    throw new Error("useNostr must be used within a NostrProvider");
+    throw new Error('useNostr must be used within a NostrProvider');
   }
   return context;
 }

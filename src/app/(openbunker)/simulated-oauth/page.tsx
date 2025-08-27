@@ -1,54 +1,54 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from 'react';
 
 export default function OpenBunkerAuthPage() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [step, setStep] = useState<"initial" | "processing" | "complete">(
-    "initial",
+  const [error, setError] = useState('');
+  const [step, setStep] = useState<'initial' | 'processing' | 'complete'>(
+    'initial'
   );
 
   const handleDiscordCallback = useCallback(async (code: string) => {
     try {
-      setStep("processing");
+      setStep('processing');
 
       // Exchange Discord code for user info and generate Nostr key
-      const response = await fetch("/api/auth/discord-callback", {
-        method: "POST",
+      const response = await fetch('/api/auth/discord-callback', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ code }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to complete Discord authentication");
+        throw new Error('Failed to complete Discord authentication');
       }
 
       const { secretKey } = await response.json();
 
-      setStep("complete");
+      setStep('complete');
 
       // Wait a moment to show completion, then handle popup callback
       setTimeout(() => {
         handlePopupCallback(secretKey);
       }, 1500);
     } catch (err) {
-      console.error("Discord callback error:", err);
-      setError("Failed to complete authentication. Please try again.");
+      console.error('Discord callback error:', err);
+      setError('Failed to complete authentication. Please try again.');
       setLoading(false);
     }
   }, []);
 
   const startDiscordOAuth = useCallback(() => {
     // In development, fake the OAuth flow
-    if (process.env.NODE_ENV === "development") {
-      setStep("processing");
+    if (process.env.NODE_ENV === 'development') {
+      setStep('processing');
       // Simulate a delay to make it feel more realistic
       setTimeout(() => {
         // Generate a fake Discord code
-        const fakeCode = "dev_" + Math.random().toString(36).substring(2, 15);
+        const fakeCode = 'dev_' + Math.random().toString(36).substring(2, 15);
         handleDiscordCallback(fakeCode);
       }, 2000);
       return;
@@ -56,11 +56,11 @@ export default function OpenBunkerAuthPage() {
 
     // Production Discord OAuth URL
     const clientId =
-      process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "your-discord-client-id";
+      process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || 'your-discord-client-id';
     const redirectUri = encodeURIComponent(
-      `${window.location.origin}/openbunker-auth`,
+      `${window.location.origin}/openbunker-auth`
     );
-    const scope = encodeURIComponent("identify email");
+    const scope = encodeURIComponent('identify email');
 
     const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
 
@@ -70,11 +70,11 @@ export default function OpenBunkerAuthPage() {
   useEffect(() => {
     // Check if we have a Discord code in the URL
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
-    const error = urlParams.get("error");
+    const code = urlParams.get('code');
+    const error = urlParams.get('error');
 
     if (error) {
-      setError("Discord authentication failed. Please try again.");
+      setError('Discord authentication failed. Please try again.');
       setLoading(false);
       return;
     }
@@ -93,22 +93,22 @@ export default function OpenBunkerAuthPage() {
       // We're in a popup - call parent callback
       try {
         // Try to call a callback function on the parent window
-        if (typeof window.opener.openBunkerCallback === "function") {
+        if (typeof window.opener.openBunkerCallback === 'function') {
           window.opener.openBunkerCallback(secretKey);
         } else {
           // Fallback: post message to parent
           window.opener.postMessage(
             {
-              type: "openbunker-auth-success",
+              type: 'openbunker-auth-success',
               secretKey: secretKey,
             },
-            window.location.origin,
+            window.location.origin
           );
         }
         // Close the popup
         window.close();
       } catch (err) {
-        console.error("Failed to communicate with parent window:", err);
+        console.error('Failed to communicate with parent window:', err);
         // Fallback to redirect
         const loginUrl = `${window.location.origin}/login?secret_key=${encodeURIComponent(secretKey)}`;
         window.location.href = loginUrl;
@@ -121,7 +121,7 @@ export default function OpenBunkerAuthPage() {
   };
 
   // Show initial development mode message
-  if (step === "initial" && process.env.NODE_ENV === "development") {
+  if (step === 'initial' && process.env.NODE_ENV === 'development') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
         <div className="text-center max-w-md mx-auto p-6">
@@ -145,7 +145,7 @@ export default function OpenBunkerAuthPage() {
     );
   }
 
-  if (loading && step === "initial") {
+  if (loading && step === 'initial') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
         <div className="text-center">
@@ -156,17 +156,17 @@ export default function OpenBunkerAuthPage() {
     );
   }
 
-  if (step === "processing") {
+  if (step === 'processing') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">
-            {process.env.NODE_ENV === "development"
-              ? "Simulating Discord OAuth..."
-              : "Completing authentication..."}
+            {process.env.NODE_ENV === 'development'
+              ? 'Simulating Discord OAuth...'
+              : 'Completing authentication...'}
           </p>
-          {process.env.NODE_ENV === "development" && (
+          {process.env.NODE_ENV === 'development' && (
             <p className="text-sm text-gray-500 mt-2">
               Development mode: Faking OAuth flow
             </p>
@@ -176,7 +176,7 @@ export default function OpenBunkerAuthPage() {
     );
   }
 
-  if (step === "complete") {
+  if (step === 'complete') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
         <div className="text-center">
@@ -199,14 +199,14 @@ export default function OpenBunkerAuthPage() {
             Authentication Complete!
           </h2>
           <p className="text-gray-600">
-            {process.env.NODE_ENV === "development"
-              ? "Simulated OAuth completed successfully."
-              : "Discord OAuth completed successfully."}
+            {process.env.NODE_ENV === 'development'
+              ? 'Simulated OAuth completed successfully.'
+              : 'Discord OAuth completed successfully.'}
           </p>
           <p className="text-sm text-gray-500 mt-2">
             {window.opener
-              ? "Closing popup..."
-              : "Redirecting back to login..."}
+              ? 'Closing popup...'
+              : 'Redirecting back to login...'}
           </p>
         </div>
       </div>

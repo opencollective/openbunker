@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Image from "next/image";
-import { useNostr } from "@/app/(example)/_context/NostrContext";
-import { Event } from "nostr-tools";
+import { useState } from 'react';
+import Image from 'next/image';
+import { useNostr } from '@/app/(example)/_context/NostrContext';
+import { Event } from 'nostr-tools';
 
 export default function UserProfileEvent() {
   const { userProfile, bunkerStatus, updateUserProfile, fetchUserProfile } =
@@ -31,7 +31,7 @@ export default function UserProfileEvent() {
     try {
       await fetchUserProfile();
     } catch {
-      setError("Failed to refresh profile");
+      setError('Failed to refresh profile');
     } finally {
       setIsRefreshing(false);
     }
@@ -43,15 +43,15 @@ export default function UserProfileEvent() {
       setEditData(parseProfileData(userProfile));
     } else {
       setEditData({
-        name: "",
-        display_name: "",
-        about: "",
-        picture: "",
-        banner: "",
-        website: "",
-        lud06: "",
-        lud16: "",
-        nip05: "",
+        name: '',
+        display_name: '',
+        about: '',
+        picture: '',
+        banner: '',
+        website: '',
+        lud06: '',
+        lud16: '',
+        nip05: '',
       });
     }
     setIsEditing(true);
@@ -68,7 +68,7 @@ export default function UserProfileEvent() {
       setIsEditing(false);
       await fetchUserProfile(); // Refresh the profile
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setIsUpdating(false);
     }
@@ -76,13 +76,13 @@ export default function UserProfileEvent() {
 
   // Handle input changes
   const handleInputChange = (field: string, value: string) => {
-    setEditData((prev) => ({
+    setEditData(prev => ({
       ...prev,
       [field]: value,
     }));
   };
 
-  const canEdit = bunkerStatus === "connected";
+  const canEdit = bunkerStatus === 'connected';
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -226,8 +226,8 @@ export default function UserProfileEvent() {
               </label>
               <input
                 type="text"
-                value={editData.name || ""}
-                onChange={(e) => handleInputChange("name", e.target.value)}
+                value={editData.name || ''}
+                onChange={e => handleInputChange('name', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Your name"
               />
@@ -239,9 +239,9 @@ export default function UserProfileEvent() {
               </label>
               <input
                 type="text"
-                value={editData.display_name || ""}
-                onChange={(e) =>
-                  handleInputChange("display_name", e.target.value)
+                value={editData.display_name || ''}
+                onChange={e =>
+                  handleInputChange('display_name', e.target.value)
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Display name"
@@ -254,8 +254,8 @@ export default function UserProfileEvent() {
               About
             </label>
             <textarea
-              value={editData.about || ""}
-              onChange={(e) => handleInputChange("about", e.target.value)}
+              value={editData.about || ''}
+              onChange={e => handleInputChange('about', e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="Tell us about yourself..."
@@ -269,8 +269,8 @@ export default function UserProfileEvent() {
               </label>
               <input
                 type="url"
-                value={editData.picture || ""}
-                onChange={(e) => handleInputChange("picture", e.target.value)}
+                value={editData.picture || ''}
+                onChange={e => handleInputChange('picture', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="https://example.com/avatar.jpg"
               />
@@ -282,8 +282,8 @@ export default function UserProfileEvent() {
               </label>
               <input
                 type="url"
-                value={editData.banner || ""}
-                onChange={(e) => handleInputChange("banner", e.target.value)}
+                value={editData.banner || ''}
+                onChange={e => handleInputChange('banner', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="https://example.com/banner.jpg"
               />
@@ -296,8 +296,8 @@ export default function UserProfileEvent() {
             </label>
             <input
               type="url"
-              value={editData.website || ""}
-              onChange={(e) => handleInputChange("website", e.target.value)}
+              value={editData.website || ''}
+              onChange={e => handleInputChange('website', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="https://yourwebsite.com"
             />
@@ -310,8 +310,8 @@ export default function UserProfileEvent() {
               </label>
               <input
                 type="text"
-                value={editData.lud06 || ""}
-                onChange={(e) => handleInputChange("lud06", e.target.value)}
+                value={editData.lud06 || ''}
+                onChange={e => handleInputChange('lud06', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="lnbc1..."
               />
@@ -323,8 +323,8 @@ export default function UserProfileEvent() {
               </label>
               <input
                 type="text"
-                value={editData.lud16 || ""}
-                onChange={(e) => handleInputChange("lud16", e.target.value)}
+                value={editData.lud16 || ''}
+                onChange={e => handleInputChange('lud16', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="user@domain.com"
               />
@@ -337,8 +337,8 @@ export default function UserProfileEvent() {
             </label>
             <input
               type="text"
-              value={editData.nip05 || ""}
-              onChange={(e) => handleInputChange("nip05", e.target.value)}
+              value={editData.nip05 || ''}
+              onChange={e => handleInputChange('nip05', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="user@domain.com"
             />
@@ -357,7 +357,7 @@ export default function UserProfileEvent() {
               disabled={isUpdating}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
-              {isUpdating ? "Updating..." : "Update Profile"}
+              {isUpdating ? 'Updating...' : 'Update Profile'}
             </button>
           </div>
         </div>
@@ -379,10 +379,10 @@ export default function UserProfileEvent() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     {parseProfileData(userProfile).display_name ||
                       parseProfileData(userProfile).name ||
-                      "Anonymous"}
+                      'Anonymous'}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    {parseProfileData(userProfile).name || "No name set"}
+                    {parseProfileData(userProfile).name || 'No name set'}
                   </p>
                 </div>
               </div>
@@ -426,7 +426,7 @@ export default function UserProfileEvent() {
               <div className="text-xs text-gray-500 pt-2 border-t">
                 <p>Event ID: {userProfile.id.slice(0, 16)}...</p>
                 <p>
-                  Created:{" "}
+                  Created:{' '}
                   {new Date(userProfile.created_at * 1000).toLocaleString()}
                 </p>
               </div>

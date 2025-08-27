@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useNostr } from "@/app/(example)/_context/NostrContext";
-import UserProfile from "@/app/(example)/_components/NostrUserProfile";
-import UserProfileEvent from "@/app/(example)/_components/UserProfileEvent";
-import BunkerStatus from "@/app/(example)/_components/BunkerStatus";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useNostr } from '@/app/(example)/_context/NostrContext';
+import UserProfile from '@/app/(example)/_components/NostrUserProfile';
+import UserProfileEvent from '@/app/(example)/_components/UserProfileEvent';
+import BunkerStatus from '@/app/(example)/_components/BunkerStatus';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function Home() {
   const { isConnected: nostrConnected } = useNostr();
@@ -15,7 +15,7 @@ export default function Home() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!nostrConnected) {
-      router.push("/example/login");
+      router.push('/example/login');
     }
   }, [nostrConnected, router]);
 
@@ -35,7 +35,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Welcome to{" "}
+            Welcome to{' '}
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               OpenBunker Example App
             </span>

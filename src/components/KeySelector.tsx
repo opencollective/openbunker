@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useUserKeys } from "@/hooks/useUserKeys";
-import CreateKeyModal from "./CreateKeyModal";
+import { useState } from 'react';
+import { useUserKeys } from '@/hooks/useUserKeys';
+import CreateKeyModal from './CreateKeyModal';
 
 interface UserKey {
   id: string;
@@ -24,11 +24,13 @@ interface UserKey {
 interface KeySelectorProps {
   onKeySelected?: (key: UserKey) => void;
   selectedKeyId?: string;
+  disabled?: boolean;
 }
 
 export default function KeySelector({
   onKeySelected,
   selectedKeyId,
+  disabled = false,
 }: KeySelectorProps) {
   const { keys, loading, error, refetch } = useUserKeys();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -40,7 +42,7 @@ export default function KeySelector({
       setCopied(keyId);
       setTimeout(() => setCopied(null), 2000);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -50,9 +52,10 @@ export default function KeySelector({
   };
 
   const handleKeySelect = (key: UserKey) => {
-    if (onKeySelected) {
-      onKeySelected(key);
+    if (disabled || !onKeySelected) {
+      return;
     }
+    onKeySelected(key);
   };
 
   if (loading) {
@@ -95,18 +98,18 @@ export default function KeySelector({
         <CreateKeyModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          onSubmit={async (data) => {
+          onSubmit={async data => {
             try {
-              const response = await fetch("/api/keys", {
-                method: "POST",
+              const response = await fetch('/api/keys', {
+                method: 'POST',
                 headers: {
-                  "Content-Type": "application/json",
+                  'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data),
               });
 
               if (!response.ok) {
-                throw new Error("Failed to create key");
+                throw new Error('Failed to create key');
               }
 
               setShowCreateModal(false);
@@ -148,7 +151,10 @@ export default function KeySelector({
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          disabled={disabled}
+          className={`w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors ${
+            disabled ? 'opacity-60 cursor-not-allowed' : ''
+          }`}
         >
           Create New Key
         </button>
@@ -165,13 +171,15 @@ export default function KeySelector({
 
       {/* Keys List */}
       <div className="space-y-3">
-        {keys.map((key) => (
+        {keys.map(key => (
           <div
             key={key.id}
-            className={`border rounded-lg p-4 cursor-pointer transition-all ${
-              selectedKeyId === key.id
-                ? "border-indigo-500 bg-indigo-50"
-                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+            className={`border rounded-lg p-4 transition-all ${
+              disabled
+                ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-60'
+                : selectedKeyId === key.id
+                  ? 'border-indigo-500 bg-indigo-50 cursor-pointer'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
             }`}
             onClick={() => handleKeySelect(key)}
           >
@@ -180,7 +188,7 @@ export default function KeySelector({
                 <div className="relative">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                     <span className="text-white font-medium text-sm">
-                      {key.name?.charAt(0).toUpperCase() || "K"}
+                      {key.name?.charAt(0).toUpperCase() || 'K'}
                     </span>
                   </div>
                   {key.isActive && (
@@ -189,7 +197,7 @@ export default function KeySelector({
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-900">
-                    {key.name || "Unnamed Key"}
+                    {key.name || 'Unnamed Key'}
                   </h4>
                   <p className="text-sm text-gray-600 font-mono">
                     {formatNpub(key.npub)}
@@ -198,12 +206,19 @@ export default function KeySelector({
               </div>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
-                    copyToClipboard(key.npub, key.id);
+                    if (!disabled) {
+                      copyToClipboard(key.npub, key.id);
+                    }
                   }}
-                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  className={`p-1 transition-colors ${
+                    disabled
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
                   title="Copy public key"
+                  disabled={disabled}
                 >
                   {copied === key.id ? (
                     <svg
@@ -275,7 +290,12 @@ export default function KeySelector({
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            disabled={disabled}
+            className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors ${
+              disabled
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
           >
             <svg
               className="w-4 h-4 mr-2"

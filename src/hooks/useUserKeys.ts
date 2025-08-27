@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserKey {
   id: string;
@@ -43,16 +43,16 @@ export function useUserKeys(): UseUserKeysReturn {
     setError(null);
 
     try {
-      const response = await fetch("/api/keys");
+      const response = await fetch('/api/keys');
       if (!response.ok) {
-        throw new Error("Failed to fetch keys");
+        throw new Error('Failed to fetch keys');
       }
 
       const data = await response.json();
       setKeys(data.keys || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch keys");
-      console.error("Error fetching user keys:", err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch keys');
+      console.error('Error fetching user keys:', err);
     } finally {
       setLoading(false);
     }

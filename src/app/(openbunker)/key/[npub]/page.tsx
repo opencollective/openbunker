@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import { useUserKeys } from "@/hooks/useUserKeys";
-import ConnectionTokensList from "@/components/ConnectionTokensList";
-import Link from "next/link";
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { useUserKeys } from '@/hooks/useUserKeys';
+import ConnectionTokensList from '@/components/ConnectionTokensList';
+import Link from 'next/link';
 
 export default function KeyDetailPage() {
   const params = useParams();
@@ -12,7 +12,7 @@ export default function KeyDetailPage() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const npub = params.npub as string;
-  const userKey = keys.find((key) => key.npub === npub);
+  const userKey = keys.find(key => key.npub === npub);
 
   const copyToClipboard = async (text: string, keyId: string) => {
     try {
@@ -20,7 +20,7 @@ export default function KeyDetailPage() {
       setCopied(keyId);
       setTimeout(() => setCopied(null), 2000);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -35,9 +35,9 @@ export default function KeyDetailPage() {
 
   // Debug logging
   useEffect(() => {
-    console.log("loading", loading);
-    console.log("error", error);
-    console.log("userKey", userKey);
+    console.log('loading', loading);
+    console.log('error', error);
+    console.log('userKey', userKey);
   }, [loading, error, userKey]);
 
   if (loading) {
@@ -117,8 +117,8 @@ export default function KeyDetailPage() {
               Key Not Found
             </h3>
             <p className="text-gray-600 mb-4">
-              The requested key could not be found or you don&apos;t have access to
-              it.
+              The requested key could not be found or you don&apos;t have access
+              to it.
             </p>
             <Link
               href="/"
@@ -158,7 +158,7 @@ export default function KeyDetailPage() {
           </Link>
 
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {userKey.name || userKey.key.name || "Unnamed Key"}
+            {userKey.name || userKey.key.name || 'Unnamed Key'}
           </h1>
           <p className="text-lg text-gray-600">
             Key Details and Connection Tokens
@@ -184,11 +184,11 @@ export default function KeyDetailPage() {
                         {formatNpub(userKey.npub)}
                       </code>
                       <button
-                        onClick={() => copyToClipboard(userKey.npub, "npub")}
+                        onClick={() => copyToClipboard(userKey.npub, 'npub')}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                         title="Copy npub"
                       >
-                        {copied === "npub" ? (
+                        {copied === 'npub' ? (
                           <svg
                             className="w-5 h-5 text-green-600"
                             fill="currentColor"
@@ -253,10 +253,10 @@ export default function KeyDetailPage() {
                       </label>
                       <div className="flex items-center space-x-2">
                         <div
-                          className={`w-2 h-2 rounded-full ${userKey.isActive ? "bg-green-500" : "bg-gray-400"}`}
+                          className={`w-2 h-2 rounded-full ${userKey.isActive ? 'bg-green-500' : 'bg-gray-400'}`}
                         ></div>
                         <span className="text-sm text-gray-900">
-                          {userKey.isActive ? "Active" : "Inactive"}
+                          {userKey.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                     </div>

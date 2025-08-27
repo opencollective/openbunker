@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useNostr } from "@/app/(example)/_context/NostrContext";
+import { useNostr } from '@/app/(example)/_context/NostrContext';
 
 export default function NostrEvents() {
   const { events, isConnected, error, clearEvents } = useNostr();
@@ -11,11 +11,11 @@ export default function NostrEvents() {
         <div className="flex items-center space-x-2">
           <div
             className={`w-3 h-3 rounded-full ${
-              isConnected ? "bg-green-500" : "bg-red-500"
+              isConnected ? 'bg-green-500' : 'bg-red-500'
             }`}
           />
           <span className="text-sm font-medium">
-            {isConnected ? "Connected to Nostr" : "Disconnected"}
+            {isConnected ? 'Connected to Nostr' : 'Disconnected'}
           </span>
         </div>
 
@@ -55,8 +55,8 @@ export default function NostrEvents() {
             </div>
             <p className="text-gray-500 text-sm">
               {isConnected
-                ? "Waiting for Nostr events..."
-                : "Not connected to Nostr relays"}
+                ? 'Waiting for Nostr events...'
+                : 'Not connected to Nostr relays'}
             </p>
           </div>
         ) : (
@@ -99,7 +99,7 @@ export default function NostrEvents() {
       {events.length > 0 && (
         <div className="mt-4 text-center">
           <p className="text-xs text-gray-500">
-            Showing {events.length} event{events.length !== 1 ? "s" : ""}
+            Showing {events.length} event{events.length !== 1 ? 's' : ''}
           </p>
         </div>
       )}

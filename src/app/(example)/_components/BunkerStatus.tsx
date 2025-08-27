@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useNostr } from "@/app/(example)/_context/NostrContext";
+import { useNostr } from '@/app/(example)/_context/NostrContext';
 
 export default function BunkerStatus() {
   const { bunkerStatus, bunkerError, bunkerConnectionToken, bunkerSigner } =
@@ -8,33 +8,33 @@ export default function BunkerStatus() {
 
   const getStatusColor = () => {
     switch (bunkerStatus) {
-      case "connected":
-        return "bg-green-500";
-      case "connecting":
-        return "bg-yellow-500";
-      case "error":
-        return "bg-red-500";
+      case 'connected':
+        return 'bg-green-500';
+      case 'connecting':
+        return 'bg-yellow-500';
+      case 'error':
+        return 'bg-red-500';
       default:
-        return "bg-gray-400";
+        return 'bg-gray-400';
     }
   };
 
   const getStatusText = () => {
     switch (bunkerStatus) {
-      case "connected":
-        return "Connected to Bunker";
-      case "connecting":
-        return "Connecting to Bunker...";
-      case "error":
-        return "Bunker Connection Error";
+      case 'connected':
+        return 'Connected to Bunker';
+      case 'connecting':
+        return 'Connecting to Bunker...';
+      case 'error':
+        return 'Bunker Connection Error';
       default:
-        return "Not Connected";
+        return 'Not Connected';
     }
   };
 
   const getStatusIcon = () => {
     switch (bunkerStatus) {
-      case "connected":
+      case 'connected':
         return (
           <svg
             className="w-5 h-5 text-white"
@@ -50,7 +50,7 @@ export default function BunkerStatus() {
             />
           </svg>
         );
-      case "connecting":
+      case 'connecting':
         return (
           <svg
             className="w-5 h-5 text-white animate-spin"
@@ -66,7 +66,7 @@ export default function BunkerStatus() {
             />
           </svg>
         );
-      case "error":
+      case 'error':
         return (
           <svg
             className="w-5 h-5 text-white"
@@ -126,11 +126,11 @@ export default function BunkerStatus() {
               {getStatusText()}
             </p>
             <p className="text-xs text-gray-500">
-              {bunkerStatus === "connected" && "Ready to sign events"}
-              {bunkerStatus === "connecting" &&
-                "Establishing secure connection..."}
-              {bunkerStatus === "error" && "Connection failed"}
-              {bunkerStatus === "disconnected" && "No bunker connection"}
+              {bunkerStatus === 'connected' && 'Ready to sign events'}
+              {bunkerStatus === 'connecting' &&
+                'Establishing secure connection...'}
+              {bunkerStatus === 'error' && 'Connection failed'}
+              {bunkerStatus === 'disconnected' && 'No bunker connection'}
             </p>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function BunkerStatus() {
         )}
 
         {/* Bunker Signer Info */}
-        {bunkerSigner && bunkerStatus === "connected" && (
+        {bunkerSigner && bunkerStatus === 'connected' && (
           <div className="p-3 bg-green-50 rounded-lg">
             <p className="text-xs font-medium text-green-900 mb-1">
               Bunker Signer
@@ -181,7 +181,7 @@ export default function BunkerStatus() {
           <div>
             <p className="text-gray-500">Signer</p>
             <p className="font-medium text-gray-900">
-              {bunkerSigner ? "Available" : "Not Available"}
+              {bunkerSigner ? 'Available' : 'Not Available'}
             </p>
           </div>
         </div>

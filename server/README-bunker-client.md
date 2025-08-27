@@ -35,10 +35,10 @@ The script will:
 The client script implements the exact flow you requested:
 
 ```typescript
-const signerConnectionString = "bunker://...."; // asks user for input
+const signerConnectionString = 'bunker://....'; // asks user for input
 const signer = NDKNip46Signer.bunker(ndk, signerConnectionString, undefined); // always generate new
 const user = await signer.blockUntilReady();
-console.log("Welcome", user.npub);
+console.log('Welcome', user.npub);
 ```
 
 ## Storage

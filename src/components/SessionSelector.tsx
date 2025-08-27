@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Image from "next/image";
-import { useAuth } from "@/contexts/AuthContext";
-import { Session } from "@supabase/supabase-js";
-import OpenBunkerLogin from "./OpenBunkerLogin";
+import { useState } from 'react';
+import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { Session } from '@supabase/supabase-js';
+import OpenBunkerLogin from './OpenBunkerLogin';
 
 interface SessionSelectorProps {
   onSessionSelected?: (session: Session) => void;
@@ -31,10 +31,10 @@ export default function SessionSelector({
     const name =
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
-      user.email?.split("@")[0] ||
-      "User";
-    const email = user.email || "No email";
-    const provider = session.user.app_metadata?.provider || "Unknown";
+      user.email?.split('@')[0] ||
+      'User';
+    const email = user.email || 'No email';
+    const provider = session.user.app_metadata?.provider || 'Unknown';
 
     return { name, email, provider };
   };
@@ -119,14 +119,14 @@ export default function SessionSelector({
               <Image
                 src={
                   currentSession.user.user_metadata?.avatar_url ||
-                  "/default-avatar.png"
+                  '/default-avatar.png'
                 }
                 alt="Profile"
                 width={48}
                 height={48}
                 className="w-12 h-12 rounded-full border-2 border-indigo-200"
-                onError={(e) => {
-                  e.currentTarget.src = "/default-avatar.png";
+                onError={e => {
+                  e.currentTarget.src = '/default-avatar.png';
                 }}
               />
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
@@ -166,18 +166,18 @@ export default function SessionSelector({
         <div className="mt-3 pt-3 border-t border-indigo-200">
           <div className="flex justify-between text-xs text-gray-600">
             <span>
-              Last active:{" "}
+              Last active:{' '}
               {currentSession.user.last_sign_in_at
                 ? new Date(
-                    currentSession.user.last_sign_in_at,
+                    currentSession.user.last_sign_in_at
                   ).toLocaleDateString()
-                : "Unknown"}
+                : 'Unknown'}
             </span>
             <span>
-              Created:{" "}
+              Created:{' '}
               {currentSession.user.created_at
                 ? new Date(currentSession.user.created_at).toLocaleDateString()
-                : "Unknown"}
+                : 'Unknown'}
             </span>
           </div>
         </div>

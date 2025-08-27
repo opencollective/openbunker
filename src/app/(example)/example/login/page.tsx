@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import LoginOptions from "@/app/(example)/_components/LoginOptions";
+import LoginOptions from '@/app/(example)/_components/LoginOptions';
 
 export default function LoginPage() {
   return (
@@ -9,7 +9,7 @@ export default function LoginPage() {
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Welcome to{" "}
+              Welcome to{' '}
               <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 OpenBunker
               </span>

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import SecretKeyLogin from "@/app/(example)/_components/SecretKeyLogin";
-import { useNostr } from "@/app/(example)/_context/NostrContext";
-import { generateSecretKey } from "nostr-tools";
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import SecretKeyLogin from '@/app/(example)/_components/SecretKeyLogin';
+import { useNostr } from '@/app/(example)/_context/NostrContext';
+import { generateSecretKey } from 'nostr-tools';
 
 export default function LoginOptions() {
   const [showSecretKey, setShowSecretKey] = useState(false);
@@ -12,49 +12,51 @@ export default function LoginOptions() {
   const { handleBunkerConnectionToken } = useNostr();
   const router = useRouter();
 
-  const handleOpenBunkerSuccess = useCallback(async (bunkerConnectionToken: string) => {
-    try {
-      const sk = generateSecretKey();
-      handleBunkerConnectionToken(bunkerConnectionToken, sk);
-      router.push("/example");
-    } catch (err) {
-      console.error("Failed to complete OpenBunker authentication:", err);
-    }
-  }, [handleBunkerConnectionToken, router]);
+  const handleOpenBunkerSuccess = useCallback(
+    async (bunkerConnectionToken: string) => {
+      try {
+        const sk = generateSecretKey();
+        handleBunkerConnectionToken(bunkerConnectionToken, sk);
+        router.push('/example');
+      } catch (err) {
+        console.error('Failed to complete OpenBunker authentication:', err);
+      }
+    },
+    [handleBunkerConnectionToken, router]
+  );
 
   // Set up the callback function for the popup
   useEffect(() => {
-    
     // Set up message listener as fallback
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      console.log("handleMessage", event.data);
-      if (event.data.type === "openbunker-auth-success") {
+      console.log('handleMessage', event.data);
+      if (event.data.type === 'openbunker-auth-success') {
         handleOpenBunkerSuccess(event.data.secretKey);
       }
     };
 
-    window.addEventListener("message", handleMessage);
+    window.addEventListener('message', handleMessage);
 
     return () => {
-      window.removeEventListener("message", handleMessage);
+      window.removeEventListener('message', handleMessage);
     };
   }, [handleOpenBunkerSuccess]);
 
   const handleOpenBunkerPopup = () => {
-    console.log("handleOpenBunkerPopup");
+    console.log('handleOpenBunkerPopup');
     // Create a popup with the OpenBunkerLogin component
     const popupWindow = window.open(
-      "/openbunker-login-popup",
-      "openbunker-login",
-      "width=500,height=600,scrollbars=yes,resizable=yes",
+      '/openbunker-login-popup',
+      'openbunker-login',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
     );
 
     if (popupWindow) {
       setPopup(popupWindow);
       // Check if popup is closed
       const checkClosed = setInterval(() => {
-        console.log("checkClosed", popupWindow.closed);
+        console.log('checkClosed', popupWindow.closed);
         if (popupWindow.closed) {
           clearInterval(checkClosed);
           setPopup(null);
@@ -129,8 +131,8 @@ export default function LoginOptions() {
           </svg>
           <span>
             {popup
-              ? "OpenBunker Login in Progress..."
-              : "Authenticate with OpenBunker"}
+              ? 'OpenBunker Login in Progress...'
+              : 'Authenticate with OpenBunker'}
           </span>
         </button>
       </div>

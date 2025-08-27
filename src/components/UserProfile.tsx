@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Image from "next/image";
-import { useAuth } from "@/contexts/AuthContext";
-import SessionSelector from "./SessionSelector";
+import { useState } from 'react';
+import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import SessionSelector from './SessionSelector';
 
 interface NostrKey {
   npub: string;
@@ -19,17 +19,17 @@ export default function UserProfile() {
 
   // Mock Nostr key data - in a real app this would come from your backend
   const nostrKey: NostrKey = {
-    npub: "npub1example...",
-    name: "User Display Name",
-    avatar: user?.user_metadata?.avatar_url || "/default-avatar.png",
-    relays: ["wss://relay.damus.io", "wss://nos.lol"],
+    npub: 'npub1example...',
+    name: 'User Display Name',
+    avatar: user?.user_metadata?.avatar_url || '/default-avatar.png',
+    relays: ['wss://relay.damus.io', 'wss://nos.lol'],
   };
 
   const handleSignOut = async () => {
     try {
       await signOut();
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error('Error signing out:', error);
     }
   };
 
@@ -39,7 +39,7 @@ export default function UserProfile() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -78,7 +78,7 @@ export default function UserProfile() {
         <div className="flex items-center space-x-4">
           <div className="relative">
             <Image
-              src={user.user_metadata?.avatar_url || "/default-avatar.png"}
+              src={user.user_metadata?.avatar_url || '/default-avatar.png'}
               alt="Profile"
               width={64}
               height={64}
@@ -90,7 +90,7 @@ export default function UserProfile() {
             <h3 className="text-xl font-semibold text-gray-900">
               {user.user_metadata?.full_name ||
                 user.user_metadata?.name ||
-                "User"}
+                'User'}
             </h3>
             <p className="text-gray-600">{user.email}</p>
             <div className="flex items-center space-x-2 mt-1">
@@ -140,7 +140,7 @@ export default function UserProfile() {
             onClick={() => setShowNostrKey(!showNostrKey)}
             className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
           >
-            {showNostrKey ? "Hide" : "Show"} Details
+            {showNostrKey ? 'Hide' : 'Show'} Details
           </button>
         </div>
 
@@ -162,7 +162,7 @@ export default function UserProfile() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  {nostrKey.name || "Nostr User"}
+                  {nostrKey.name || 'Nostr User'}
                 </p>
                 <p className="text-xs text-gray-500 font-mono">
                   {formatNpub(nostrKey.npub)}
@@ -247,7 +247,7 @@ export default function UserProfile() {
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Provider</span>
             <span className="text-sm font-medium text-gray-900">
-              {user.app_metadata?.provider || "Unknown"}
+              {user.app_metadata?.provider || 'Unknown'}
             </span>
           </div>
           <div className="flex justify-between items-center">
@@ -255,7 +255,7 @@ export default function UserProfile() {
             <span className="text-sm font-medium text-gray-900">
               {user.last_sign_in_at
                 ? new Date(user.last_sign_in_at).toLocaleDateString()
-                : "Unknown"}
+                : 'Unknown'}
             </span>
           </div>
           <div className="flex justify-between items-center">
@@ -263,7 +263,7 @@ export default function UserProfile() {
             <span className="text-sm font-medium text-gray-900">
               {user.created_at
                 ? new Date(user.created_at).toLocaleDateString()
-                : "Unknown"}
+                : 'Unknown'}
             </span>
           </div>
         </div>

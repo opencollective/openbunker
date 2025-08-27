@@ -115,8 +115,8 @@ Your client application should open a popup window to the OpenBunker authenticat
 We recommend using NDK's bunker signer with the bunker connection token for secure remote signing:
 
 ```typescript
-import { NDK } from "@nostr-dev-kit/ndk";
-import { NDKBunkerSigner } from "@nostr-dev-kit/ndk";
+import { NDK } from '@nostr-dev-kit/ndk';
+import { NDKBunkerSigner } from '@nostr-dev-kit/ndk';
 
 // Initialize bunker signer with connection token
 const bunkerSigner = new NDKBunkerSigner(connectionToken);
@@ -176,20 +176,13 @@ Before OpenBunker should be considered production-ready, the following issues ne
 
 ### 1. Private Key Security
 
-- **Assessment Required**: Current security measures need thorough evaluation
 - **Additional Encryption**: Consider implementing additional encryption layers for stored private keys
-- **Key Rotation**: Implement secure key rotation mechanisms
 
 ### 2. Authorization System
 
 - **Connection Token Validation**: Currently, the server authorizes every local key without proper connection token validation on first connection
 - **Session Management**: Improve session validation and token-based authentication
 - **Access Control**: Implement proper authorization checks for all bunker operations
-
-### 3. Additional Features
-
-- **Multi-Social Support**: Add support for additional social platforms (Twitter, GitHub, etc.)
-- **Audit Logging**: Add comprehensive audit trails for all operations
 
 ## Development
 
@@ -239,3 +232,8 @@ MIT License - see LICENSE file for details.
 
 - NIP-46 compliant bunker server implementation
 - Inspired by https://github.com/nostrband/noauth
+
+## Follow-up work
+
+- nip-46 signer implementation : likely extract signer implementation?
+- testing : signer, authorization

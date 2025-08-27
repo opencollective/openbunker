@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
 interface CreateKeyModalProps {
   isOpen: boolean;
@@ -13,44 +13,44 @@ export default function CreateKeyModal({
   onClose,
   onSubmit,
 }: CreateKeyModalProps) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim() || !email.trim()) {
-      setError("Please fill in all fields");
+      setError('Please fill in all fields');
       return;
     }
 
     // Validate name format (alphanumeric and dots only)
     const nameRegex = /^[a-zA-Z0-9.]+$/;
     if (!nameRegex.test(name)) {
-      setError("Name can only contain letters, numbers, and dots");
+      setError('Name can only contain letters, numbers, and dots');
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address");
+      setError('Please enter a valid email address');
       return;
     }
 
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       await onSubmit({ name: name.trim(), email: email.trim() });
       // Reset form on success
-      setName("");
-      setEmail("");
+      setName('');
+      setEmail('');
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create key");
+      setError(err instanceof Error ? err.message : 'Failed to create key');
     } finally {
       setLoading(false);
     }
@@ -58,9 +58,9 @@ export default function CreateKeyModal({
 
   const handleClose = () => {
     if (!loading) {
-      setName("");
-      setEmail("");
-      setError("");
+      setName('');
+      setEmail('');
+      setError('');
       onClose();
     }
   };
@@ -108,7 +108,7 @@ export default function CreateKeyModal({
                 type="text"
                 id="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={e => setName(e.target.value)}
                 placeholder="yourname"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 disabled={loading}
@@ -130,7 +130,7 @@ export default function CreateKeyModal({
                 type="email"
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="your.email@example.com"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 disabled={loading}
@@ -186,7 +186,7 @@ export default function CreateKeyModal({
                   Creating...
                 </>
               ) : (
-                "Create Key"
+                'Create Key'
               )}
             </button>
           </div>

@@ -94,11 +94,13 @@ Check if a user with the given email already exists in the system.
 ## Bunker Connection Token Format
 
 The bunker connection token follows this format:
+
 ```
 bunker://{hex_public_key}?relay={relay_url}&secret={connection_token}
 ```
 
 Example:
+
 ```
 bunker://abc123def456...?relay=wss://relay.nsec.app&secret=ghi789jkl012...
 ```
@@ -133,6 +135,7 @@ NEXT_PUBLIC_BUNKER_RELAYS="wss://relay.nsec.app"
 ## Database Models Used
 
 The API uses existing OpenBunker models:
+
 - `Keys` - Stores Nostr key information
 - `ConnectTokens` - Stores connection tokens with expiration
 

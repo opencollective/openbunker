@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useNostr } from "@/app/(example)/_context/NostrContext";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import { useNostr } from '@/app/(example)/_context/NostrContext';
+import { useRouter } from 'next/navigation';
 
 export default function SecretKeyLogin() {
-  const [secretKey, setSecretKey] = useState("");
+  const [secretKey, setSecretKey] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const { setLocalSecretKey } = useNostr();
 
@@ -18,13 +18,13 @@ export default function SecretKeyLogin() {
     if (!secretKey.trim()) return;
 
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       setLocalSecretKey(secretKey as unknown as Uint8Array);
-      router.push("/");
+      router.push('/');
     } catch {
-      setError("Invalid secret key. Please check your key and try again.");
+      setError('Invalid secret key. Please check your key and try again.');
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export default function SecretKeyLogin() {
             id="secretKey"
             type="password"
             value={secretKey}
-            onChange={(e) => setSecretKey(e.target.value)}
+            onChange={e => setSecretKey(e.target.value)}
             placeholder="nsec1..."
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
             required
@@ -74,7 +74,7 @@ export default function SecretKeyLogin() {
           disabled={loading || !secretKey.trim()}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
-          {loading ? "Authenticating..." : "Authenticate"}
+          {loading ? 'Authenticating...' : 'Authenticate'}
         </button>
       </form>
 

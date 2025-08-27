@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useConnectionTokens } from "@/hooks/useConnectionTokens";
-import { nip19 } from "nostr-tools";
+import { useState } from 'react';
+import { useConnectionTokens } from '@/hooks/useConnectionTokens';
+import { nip19 } from 'nostr-tools';
 
 interface ConnectionTokensListProps {
   npub: string;
@@ -25,8 +25,8 @@ export default function ConnectionTokensList({
     let url = `bunker://${pubkey}?secret=${secret}`;
 
     if (relays) {
-      const relayList = relays.split(",").map((r) => r.trim());
-      relayList.forEach((relay) => {
+      const relayList = relays.split(',').map(r => r.trim());
+      relayList.forEach(relay => {
         url += `&relay=${encodeURIComponent(relay)}`;
       });
     }
@@ -40,7 +40,7 @@ export default function ConnectionTokensList({
       setCopied(tokenId);
       setTimeout(() => setCopied(null), 2000);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -57,7 +57,7 @@ export default function ConnectionTokensList({
     const now = Date.now();
     const diff = expiry - now;
 
-    if (diff <= 0) return "Expired";
+    if (diff <= 0) return 'Expired';
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -74,10 +74,10 @@ export default function ConnectionTokensList({
       const newToken = await createToken();
       if (newToken) {
         // Token created successfully
-        console.log("New token created:", newToken);
+        console.log('New token created:', newToken);
       }
     } catch (error) {
-      console.error("Failed to create token:", error);
+      console.error('Failed to create token:', error);
     } finally {
       setCreating(false);
     }
@@ -86,17 +86,17 @@ export default function ConnectionTokensList({
   const handleDeleteToken = async (token: string) => {
     if (
       confirm(
-        "Are you sure you want to delete this connection token? This action cannot be undone.",
+        'Are you sure you want to delete this connection token? This action cannot be undone.'
       )
     ) {
       setDeleting(token);
       try {
         const success = await deleteToken(token);
         if (success) {
-          console.log("Token deleted successfully");
+          console.log('Token deleted successfully');
         }
       } catch (error) {
-        console.error("Failed to delete token:", error);
+        console.error('Failed to delete token:', error);
       } finally {
         setDeleting(null);
       }
@@ -296,25 +296,25 @@ export default function ConnectionTokensList({
       </div>
 
       <div className="space-y-4">
-        {tokens.map((token) => (
+        {tokens.map(token => (
           <div
             key={token.token}
             className={`border rounded-lg p-4 transition-colors ${
               token.isExpired
-                ? "border-gray-200 bg-gray-50"
-                : "border-gray-200 hover:border-gray-300"
+                ? 'border-gray-200 bg-gray-50'
+                : 'border-gray-200 hover:border-gray-300'
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    token.isExpired ? "bg-gray-100" : "bg-green-100"
+                    token.isExpired ? 'bg-gray-100' : 'bg-green-100'
                   }`}
                 >
                   <svg
                     className={`w-5 h-5 ${
-                      token.isExpired ? "text-gray-600" : "text-green-600"
+                      token.isExpired ? 'text-gray-600' : 'text-green-600'
                     }`}
                     fill="none"
                     stroke="currentColor"
@@ -427,11 +427,11 @@ export default function ConnectionTokensList({
                 <div className="flex items-center space-x-1">
                   <div
                     className={`w-2 h-2 rounded-full ${
-                      token.isExpired ? "bg-gray-400" : "bg-green-500"
+                      token.isExpired ? 'bg-gray-400' : 'bg-green-500'
                     }`}
                   ></div>
                   <span className="text-xs text-gray-500">
-                    {token.isExpired ? "Expired" : "Active"}
+                    {token.isExpired ? 'Expired' : 'Active'}
                   </span>
                 </div>
               </div>
@@ -443,7 +443,7 @@ export default function ConnectionTokensList({
                 <span>Expires: {formatDate(token.expiry)}</span>
                 <span
                   className={
-                    token.isExpired ? "text-red-500" : "text-green-600"
+                    token.isExpired ? 'text-red-500' : 'text-green-600'
                   }
                 >
                   {getTimeUntilExpiry(token.expiry)}

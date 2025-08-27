@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useUserKeys } from "@/hooks/useUserKeys";
-import CreateKeyModal from "./CreateKeyModal";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUserKeys } from '@/hooks/useUserKeys';
+import CreateKeyModal from './CreateKeyModal';
 
 export default function UserKeys() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function UserKeys() {
       setCopied(keyId);
       setTimeout(() => setCopied(null), 2000);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -31,12 +31,11 @@ export default function UserKeys() {
   };
 
   const handleCreateKey = async (data: { name: string; email: string }) => {
-
     try {
-      const response = await fetch("/api/keys", {
-        method: "POST",
+      const response = await fetch('/api/keys', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           name: data.name,
@@ -46,7 +45,7 @@ export default function UserKeys() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create key");
+        throw new Error(errorData.error || 'Failed to create key');
       }
 
       const result = await response.json();
@@ -54,7 +53,7 @@ export default function UserKeys() {
       // Show success message with the secret key (only shown once)
       if (result.secretKey) {
         alert(
-          `Key created successfully!\n\nYour secret key (save this securely):\n${result.secretKey}\n\nThis key will not be shown again.`,
+          `Key created successfully!\n\nYour secret key (save this securely):\n${result.secretKey}\n\nThis key will not be shown again.`
         );
       }
 
@@ -168,7 +167,7 @@ export default function UserKeys() {
       </div>
 
       <div className="space-y-4">
-        {keys.map((userKey) => (
+        {keys.map(userKey => (
           <div
             key={userKey.id}
             className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer"
@@ -191,7 +190,7 @@ export default function UserKeys() {
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-900">
-                    {userKey.name || userKey.key.name || "Unnamed Key"}
+                    {userKey.name || userKey.key.name || 'Unnamed Key'}
                   </h4>
                   <p className="text-xs text-gray-500 font-mono">
                     {formatNpub(userKey.npub)}
@@ -199,7 +198,7 @@ export default function UserKeys() {
                   {userKey.key.relays && userKey.key.relays.length > 0 && (
                     <p className="text-xs text-gray-400 mt-1">
                       {userKey.key.relays.length} relay
-                      {userKey.key.relays.length !== 1 ? "s" : ""} connected
+                      {userKey.key.relays.length !== 1 ? 's' : ''} connected
                     </p>
                   )}
                 </div>
@@ -207,7 +206,7 @@ export default function UserKeys() {
 
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     copyToClipboard(userKey.npub, userKey.id);
                   }}
@@ -245,10 +244,10 @@ export default function UserKeys() {
 
                 <div className="flex items-center space-x-1">
                   <div
-                    className={`w-2 h-2 rounded-full ${userKey.isActive ? "bg-green-500" : "bg-gray-400"}`}
+                    className={`w-2 h-2 rounded-full ${userKey.isActive ? 'bg-green-500' : 'bg-gray-400'}`}
                   ></div>
                   <span className="text-xs text-gray-500">
-                    {userKey.isActive ? "Active" : "Inactive"}
+                    {userKey.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>

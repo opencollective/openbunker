@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import UserProfile from "@/components/UserProfile";
-import UserKeys from "@/components/UserKeys";
+import Link from 'next/link';
+import UserProfile from '@/components/UserProfile';
+import UserKeys from '@/components/UserKeys';
 
 export default function Home() {
   return (
@@ -10,7 +10,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Welcome to{" "}
+            Welcome to{' '}
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               OpenBunker
             </span>

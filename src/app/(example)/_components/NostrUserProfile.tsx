@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useNostr } from "../_context/NostrContext";
-import { getPublicKey } from "nostr-tools";
-import { nip19 } from "nostr-tools";
+import { useState } from 'react';
+import { useNostr } from '../_context/NostrContext';
+import { getPublicKey } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
 
 export default function UserProfile() {
   const { localSecretKey, bunkerConnectionToken } = useNostr();
@@ -87,9 +87,9 @@ export default function UserProfile() {
       <button
         onClick={() => {
           // Handle sign out
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("openbunker_session");
-            window.location.href = "/example";
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('openbunker_session');
+            window.location.href = '/example';
           }
         }}
         className="w-full mt-6 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"

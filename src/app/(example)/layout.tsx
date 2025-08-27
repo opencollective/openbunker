@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "../globals.css";
-import { NostrProvider } from "@/app/(example)/_context/NostrContext";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import '../globals.css';
+import { NostrProvider } from '@/app/(example)/_context/NostrContext';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "OpenBunker - Nostr Community Onboarding",
+  title: 'OpenBunker - Nostr Community Onboarding',
   description:
-    "A Discord-like login app for onboarding members to Nostr communities",
+    'A Discord-like login app for onboarding members to Nostr communities',
 };
 
 export default function RootLayout({
