@@ -1,117 +1,32 @@
 // WebSocket polyfill for Node.js
-import WebSocket from "ws";
+import WebSocket from 'ws';
 (global as any).WebSocket = WebSocket;
 
 import NDK, {
   NDKNip46Backend,
   NDKPrivateKeySigner,
-  NDKEvent,
   Nip46PermitCallbackParams,
-} from "@nostr-dev-kit/ndk";
-import { PrismaClient } from "@prisma/client";
+} from '@nostr-dev-kit/ndk';
+import { PrismaClient } from '@prisma/client';
+import LoggingNDKNip46Backend from './nip-46-backend';
 
-import { hexToBytes } from "@noble/hashes/utils"; // already an installed dependency
-
-// Extended NDKNip46Backend with logging
-class LoggingNDKNip46Backend extends NDKNip46Backend {
-  private npub: string;
-
-  constructor(
-    ndk: NDK,
-    signer: NDKPrivateKeySigner,
-    allowCallback: (params: any) => Promise<boolean>,
-    npub: string,
-  ) {
-    super(ndk, signer, allowCallback);
-    this.npub = npub;
-  }
-
-  async start() {
-    this.localUser = await this.signer.user();
-    const sub = this.ndk.subscribe(
-      {
-        kinds: [24133],
-        "#p": [this.localUser.pubkey],
-        since: Math.floor(Date.now() / 1000),
-      },
-      { closeOnEose: false },
-    );
-    sub.on("event", (e) => this.handleIncomingEvent(e));
-  }
-
-  protected async handleIncomingEvent(event: NDKEvent): Promise<void> {
-    const timestamp = new Date().toISOString();
-    const remotePubkey = event.pubkey;
-
-    console.log(
-      `[${timestamp}] [${this.npub}] 📥 Incoming NIP-46 request from ${remotePubkey}`,
-    );
-    console.log(`[${timestamp}] [${this.npub}] 📋 Event details:`, {
-      id: event.id,
-      kind: event.kind,
-      created_at: event.created_at
-        ? new Date(event.created_at * 1000).toISOString()
-        : "unknown",
-      content_length: event.content.length,
-      tags_count: event.tags.length,
-    });
-
-    try {
-      // Parse the event to get method and params
-      const { id, method, params } = (await this.rpc.parseEvent(event)) as any;
-
-      console.log(`[${timestamp}] [${this.npub}] 🔍 Parsed request:`, {
-        id,
-        method,
-        params_count: params ? params.length : 0,
-        params_preview: params
-          ? JSON.stringify(params).substring(0, 200) +
-            (JSON.stringify(params).length > 200 ? "..." : "")
-          : "none",
-      });
-
-      // Call the parent method
-      await super.handleIncomingEvent(event);
-
-      console.log(
-        `[${timestamp}] [${this.npub}] ✅ Request processed successfully`,
-      );
-    } catch (error) {
-      console.error(
-        `[${timestamp}] [${this.npub}] ❌ Error processing request:`,
-        {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          remote_pubkey: remotePubkey,
-        },
-      );
-
-      // Re-throw to maintain original behavior
-      throw error;
-    }
-  }
-
-  public async applyToken(_pubkey: string, _token: string): Promise<void> {
-    console.log("applyToken", _pubkey, _token);
-    return;
-  }
-}
+import { hexToBytes } from '@noble/hashes/utils'; // already an installed dependency
+import { nip19 } from 'nostr-tools';
 
 // Database connection
 const prisma = new PrismaClient();
 
 // Nostr relay URLs - using reliable relays
-const relays = ["wss://relay.nsec.app"];
+const relays = ['wss://relay.nsec.app'];
 
-console.log("Starting Multi-Bunker Server...");
-console.log(`Connecting to relays: ${relays.join(", ")}`);
+console.log('Starting Multi-Bunker Server...');
+console.log(`Connecting to relays: ${relays.join(', ')}`);
 
 interface BunkerInstance {
   npub: string;
   signer: NDKPrivateKeySigner;
   backend: NDKNip46Backend;
 }
-
 class MultiBunkerServer {
   private bunkerInstances: Map<string, BunkerInstance> = new Map();
   private isRunning = false;
@@ -124,30 +39,30 @@ class MultiBunkerServer {
     });
 
     // Set up graceful shutdown
-    process.on("SIGTERM", () => {
-      console.log("SIGTERM received, shutting down gracefully");
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully');
       this.shutdown();
     });
 
-    process.on("SIGINT", () => {
-      console.log("SIGINT received, shutting down gracefully");
+    process.on('SIGINT', () => {
+      console.log('SIGINT received, shutting down gracefully');
       this.shutdown();
     });
   }
 
   async start() {
     if (this.isRunning) {
-      console.log("Server is already running");
+      console.log('Server is already running');
       return;
     }
 
     this.isRunning = true;
-    console.log("Starting Multi-Bunker Server...");
+    console.log('Starting Multi-Bunker Server...');
 
     try {
       // Connect the single NDK instance
       await this.ndk.connect();
-      console.log("Connected to relays");
+      console.log('Connected to relays');
 
       // Scan database for keys and connection tokens
       await this.scanDatabase();
@@ -161,13 +76,13 @@ class MultiBunkerServer {
       // Keep the process alive
       this.setupHeartbeat();
     } catch (error) {
-      console.error("Error starting server:", error);
+      console.error('Error starting server:', error);
       this.shutdown();
     }
   }
 
   private async scanDatabase() {
-    console.log("Scanning database for keys and connection tokens...");
+    console.log('Scanning database for keys and connection tokens...');
 
     try {
       // Get all keys from the database
@@ -194,7 +109,7 @@ class MultiBunkerServer {
       });
 
       console.log(
-        `Found ${connectionTokens.length} non-expired connection tokens`,
+        `Found ${connectionTokens.length} non-expired connection tokens`
       );
 
       // Group tokens by npub
@@ -206,18 +121,17 @@ class MultiBunkerServer {
         tokensByNpub.get(token.npub)!.push(token);
       }
 
-
       // Store the data for bunker creation
       this.keys = keys;
       this.tokensByNpub = tokensByNpub;
     } catch (error) {
-      console.error("Error scanning database:", error);
+      console.error('Error scanning database:', error);
       throw error;
     }
   }
 
   private async startAllBunkers() {
-    console.log("Starting bunker instances...");
+    console.log('Starting bunker instances...');
 
     for (const key of this.keys) {
       try {
@@ -253,7 +167,7 @@ class MultiBunkerServer {
       async (params: Nip46PermitCallbackParams) => {
         return await this.validateConnection(params, key.npub);
       },
-      key.npub,
+      key.npub
     );
 
     // Start backend
@@ -276,62 +190,79 @@ class MultiBunkerServer {
 
   private async validateConnection(
     params: Nip46PermitCallbackParams,
-    npub: string,
+    npub: string
   ): Promise<boolean> {
     console.log(`Validating connection for ${npub}:`, params);
 
     // Check if we have a valid token for this connection
-    if (params.method === "connect") {
-      // FIXME the NDK implementation is not passing the actual parameters and passing only the token
-      // const token = params.params;
-      // const dbToken = await prisma.connectTokens.findFirst({
-      //   where: {
-      //     token: token,
-      //     npub: npub,
-      //     expiry: {
-      //       gt: BigInt(Date.now())
-      //     }
-      //   }
-      // });
-      // if (dbToken) {
-      //   console.log(`Token: ${token} is valid`);
-      //   console.log(`DB Token: ${dbToken}`);
-      //   return true;
-      // } else {
-      //   console.log(`Token: ${token} is invalid`);
-      //   return false;
-      // }
+    if (params.method === 'connect') {
+      // the signer-side pubkey
+      const signerPubkey = params.params[0];
+      const signerNpub = await nip19.npubEncode(signerPubkey);
+      const token = params.params[1];
+
+      // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
+      const pubkeySession = await prisma.sessions.findFirst({
+        where: {
+          npub: signerNpub,
+          sessionNpub: npub,
+        },
+      });
+      if (pubkeySession) {
+        console.log('Found existing session for ', npub, signerPubkey);
+        return true;
+      }
+
+      // If there are no active sessions, we need a connection token
+      const dbToken = await prisma.connectTokens.findFirst({
+        where: {
+          token: token,
+          npub: npub,
+          expiry: {
+            gt: BigInt(Date.now()),
+          },
+        },
+      });
+      if (dbToken) {
+        console.log(`Token: ${token} is valid`);
+        console.log(`DB Token: ${dbToken}`);
+        // The token is used, so we delete it and create a session based on the token
+        // delete token
+        await prisma.connectTokens.delete({
+          where: {
+            token: token,
+          },
+        });
+        // create session
+        await prisma.sessions.create({
+          data: {
+            npub: signerNpub,
+            sessionNpub: npub,
+            expiresAt: BigInt(Date.now() + 1000 * 60 * 60), // 30 days
+          },
+        });
+        return true;
+      } else {
+        console.log(`Token: ${token} is invalid`);
+        return false;
+      }
+    } else {
+      // Check if there is a session active
     }
-    // const now = BigInt(Date.now());
-    // const validTokens = tokens.filter(token =>
-    //   BigInt(token.expiry) > now
-    // );
-
-    // if (validTokens.length === 0) {
-    //   console.log(`No valid tokens found for ${npub} - accepting connection anyway (tokens not required)`);
-    //   return true;
-    // }
-
-    // // Accept any connection with valid tokens
-    // // You can add more sophisticated validation here
-    // console.log(`Valid tokens found for ${npub} - accepting connection`);
-    return true;
+    return false;
   }
 
   private setupPeriodicScanning() {
     // Scan for new keys/tokens every 5 seconds
-    setInterval(
-      async () => {
-        console.log("Periodic database scan...");
-        try {
-          await this.scanDatabase();
-          await this.updateBunkerInstances();
-        } catch (error) {
-          console.error("Error in periodic scan:", error);
-        }
-      },
-      5 * 1000,
-    );
+    setInterval(async () => {
+      console.log('Periodic database scan...');
+      try {
+        await this.scanDatabase();
+        await this.updateBunkerInstances();
+      } catch (error) {
+        console.error('Error in periodic scan:', error);
+      }
+    }, 5 * 1000);
   }
 
   private async updateBunkerInstances() {
@@ -354,32 +285,18 @@ class MultiBunkerServer {
     // All bunkers run regardless of token status
   }
 
-  private async stopBunker(npub: string) {
-    const instance = this.bunkerInstances.get(npub);
-    if (instance) {
-      try {
-        // Note: NDKNip46Backend doesn't have a stop method in the current version
-        // The backend will be cleaned up when the process exits
-        this.bunkerInstances.delete(npub);
-        console.log(`Stopped bunker for ${npub}`);
-      } catch (error) {
-        console.error(`Error stopping bunker for ${npub}:`, error);
-      }
-    }
-  }
-
   private setupHeartbeat() {
     // Log status every 30 seconds
     setInterval(() => {
       const activeBunkers = this.bunkerInstances.size;
       console.log(
-        `Multi-Bunker Server Status: ${activeBunkers} active bunkers - ${new Date().toISOString()}`,
+        `Multi-Bunker Server Status: ${activeBunkers} active bunkers - ${new Date().toISOString()}`
       );
     }, 30000);
   }
 
   async shutdown() {
-    console.log("Shutting down Multi-Bunker Server...");
+    console.log('Shutting down Multi-Bunker Server...');
     this.isRunning = false;
 
     // Stop all bunker instances
@@ -397,9 +314,9 @@ class MultiBunkerServer {
 
     // Close database connection
     await prisma.$disconnect();
-    console.log("Database connection closed");
+    console.log('Database connection closed');
 
-    console.log("Multi-Bunker Server shutdown complete");
+    console.log('Multi-Bunker Server shutdown complete');
     process.exit(0);
   }
 
@@ -415,7 +332,7 @@ async function main() {
   try {
     await server.start();
   } catch (error) {
-    console.error("Failed to start server:", error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }

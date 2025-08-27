@@ -13,6 +13,29 @@ datasource db {
   url       = env("DATABASE_URL")
 }
 
+// Communities can create a scope to facilitate the management of identities 
+model Scopes {
+  id        String   @id
+  slug      String   @unique
+  name      String
+  description String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([slug])
+}
+
+model Sessions {
+  // The session npub is the public key of the local key that is used to connect
+  sessionNpub        String   @id
+  npub      String
+  appNpub   String?
+  scopeSlug String?
+  expiresAt BigInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([npub, appNpub])
+}
+
 // New model to associate Nostr keys with Supabase users
 model UserKeys {
   id          String   @id @default(cuid())
