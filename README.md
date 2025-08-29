@@ -20,6 +20,8 @@ OpenBunker is a **custodial application**, meaning private keys are stored in a 
 - **Supabase**: PostgreSQL database and social authentication provider
 - **Bunker Server**: NIP-46 compliant server that listens on authentication relays and handles remote signing requests
 
+For a more in-depth explanation of how Openbunker relates to `NIP-46` see [Concepts and Flows](./docs/CONCEPTS_AND_FLOWS.md)
+
 ## Getting Started
 
 ### Prerequisites
