@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
 
 export default function OpenBunkerLogin() {
   const [loading, setLoading] = useState(false);
@@ -55,13 +55,6 @@ export default function OpenBunkerLogin() {
         <p className="text-gray-600">
           Choose your preferred authentication method
         </p>
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-2 p-2 bg-yellow-100 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              🧪 Development mode: OAuth flow will be simulated
-            </p>
-          </div>
-        )}
       </div>
 
       {error && (
@@ -90,11 +83,7 @@ export default function OpenBunkerLogin() {
             />
           </svg>
           <span>
-            {loading
-              ? process.env.NODE_ENV === 'development'
-                ? 'Opening simulated OAuth...'
-                : 'Opening OpenBunker...'
-              : 'Start Discord OAuth'}
+            {loading ? 'Opening OpenBunker...' : 'Start Discord OAuth'}
           </span>
         </button>
 
@@ -178,14 +167,7 @@ export default function OpenBunkerLogin() {
 
       {loading && (
         <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Authentication in progress...
-            {process.env.NODE_ENV === 'development' && (
-              <span className="block text-xs text-yellow-600 mt-1">
-                🧪 Development mode: OAuth is simulated
-              </span>
-            )}
-          </p>
+          <p className="text-sm text-gray-600">Authentication in progress...</p>
         </div>
       )}
 
@@ -194,12 +176,6 @@ export default function OpenBunkerLogin() {
           <strong>How it works:</strong> Choose between Discord OAuth for a new
           Nostr key or use a magic link sent to your email.
         </p>
-        {process.env.NODE_ENV === 'development' && (
-          <p className="text-xs text-yellow-600 mt-1">
-            <strong>Dev mode:</strong> OAuth flow is simulated in a popup window
-            for realistic testing. Magic links are logged to console.
-          </p>
-        )}
       </div>
     </div>
   );

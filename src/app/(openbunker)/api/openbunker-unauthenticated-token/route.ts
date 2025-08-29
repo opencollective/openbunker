@@ -109,86 +109,8 @@ export async function OPTIONS() {
 
   // Add CORS headers for preflight requests
   response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
 
   return response;
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const email = searchParams.get('email');
-    const scope = searchParams.get('scope');
-
-    if (!email) {
-      const response = NextResponse.json(
-        { error: 'Email parameter is required' },
-        { status: 400 }
-      );
-
-      // Add CORS headers
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      response.headers.set(
-        'Access-Control-Allow-Methods',
-        'GET, POST, OPTIONS'
-      );
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-
-      return response;
-    }
-
-    // Check if user exists with matching scope
-    const existingKey = await prisma.keys.findFirst({
-      where: {
-        email: email,
-        scopeSlug: scope,
-      },
-    });
-
-    if (existingKey) {
-      const response = NextResponse.json({
-        exists: true,
-        npub: existingKey.npub,
-        name: existingKey.name,
-        scopeSlug: existingKey.scopeSlug,
-        message: 'User with this email and scope already exists',
-      });
-
-      // Add CORS headers
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      response.headers.set(
-        'Access-Control-Allow-Methods',
-        'GET, POST, OPTIONS'
-      );
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-
-      return response;
-    }
-
-    const response = NextResponse.json({
-      exists: false,
-      message: 'No user found with this email and scope',
-    });
-
-    // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-
-    return response;
-  } catch (error) {
-    console.error('Error checking user existence:', error);
-    const response = NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-
-    // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-
-    return response;
-  }
 }

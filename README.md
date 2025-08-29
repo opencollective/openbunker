@@ -153,36 +153,13 @@ npm run dev
 
 ## API Endpoints
 
-### Authentication
-
-- `POST /api/auth/discord-callback` - Handle Discord OAuth callback
-- `GET /api/auth/openbunker-url` - Get authentication URL
-- `POST /api/auth/verify-session` - Verify user session
-
 ## Security Considerations
 
 ⚠️ **Important**: This is a custodial application. Private keys are stored in the database.
 
-### Current Security Status
-
-- Supabase DB is public...
-- Private keys are stored in Supabase database
-- Additional encryption layer recommended for production
-- Connection token validation needs improvement
-
 ## TODO - Before Production
 
 Before OpenBunker should be considered production-ready, the following issues need to be addressed:
-
-### 1. Private Key Security
-
-- **Additional Encryption**: Consider implementing additional encryption layers for stored private keys
-
-### 2. Authorization System
-
-- **Connection Token Validation**: Currently, the server authorizes every local key without proper connection token validation on first connection
-- **Session Management**: Improve session validation and token-based authentication
-- **Access Control**: Implement proper authorization checks for all bunker operations
 
 ## Development
 
@@ -232,8 +209,3 @@ MIT License - see LICENSE file for details.
 
 - NIP-46 compliant bunker server implementation
 - Inspired by https://github.com/nostrband/noauth
-
-## Follow-up work
-
-- nip-46 signer implementation : likely extract signer implementation?
-- testing : signer, authorization
