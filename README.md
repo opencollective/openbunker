@@ -183,6 +183,7 @@ Before OpenBunker should be considered production-ready, the following issues ne
 - **Connection Token Validation**: Currently, the server authorizes every local key without proper connection token validation on first connection
 - **Session Management**: Improve session validation and token-based authentication
 - **Access Control**: Implement proper authorization checks for all bunker operations
+- **Scope-Based Access Control**: Add more granular control on unauthenticated requests based on scope validation and permissions
 
 ## Development
 
@@ -237,3 +238,8 @@ MIT License - see LICENSE file for details.
 
 - nip-46 signer implementation : likely extract signer implementation?
 - testing : signer, authorization
+- scope-based access control implementation and validation
+
+## Documentation
+
+- [Scope-Based Access Control](./docs/SCOPE_BASED_ACCESS_CONTROL.md) - Detailed guide on implementing scope-based access control for unauthenticated requests

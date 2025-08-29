@@ -1,7 +1,10 @@
 import { prisma } from '@/lib/db';
+import * as Sentry from '@sentry/nextjs';
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+
+const { logger } = Sentry;
 
 const TOKEN_SIZE = 16;
 
@@ -16,6 +19,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
+    // Add user context to Sentry
+    Sentry.setUser({
+      email: email,
+      username: name,
+    });
+
+    // Add custom context data
+    Sentry.setContext('request_data', {
+      email,
+      name,
+      scope,
+    });
+
     // Check if user with this email already exists in the system with matching scope
     const existingKey = await prisma.keys.findFirst({
       where: {
@@ -27,6 +43,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let keyToReturn: any = existingKey;
     if (!existingKey) {
+      logger.info('New user key created successfully', { email, name, scope });
       message = 'New user key created successfully';
       // Generate a new Nostr key pair for the new user
       const secretKey = generateSecretKey();
@@ -48,6 +65,7 @@ export async function POST(request: NextRequest) {
       keyToReturn = newKey;
       existingUser = false;
     } else {
+      logger.info('Existing user key found', { email, name, scope });
       message = 'Existing user key found';
       existingUser = true;
     }
@@ -64,7 +82,10 @@ export async function POST(request: NextRequest) {
         jsonData: JSON.stringify({ email, name, scope }),
       },
     });
-
+    const span = Sentry.getActiveSpan();
+    if (span) {
+      span.setAttribute('bunker.signerNpub', npub);
+    }
     // Generate the bunker connection token in the same format as the popup
     const relay = encodeURIComponent(
       process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app'

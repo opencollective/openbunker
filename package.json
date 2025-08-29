@@ -19,6 +19,8 @@
   "dependencies": {
     "@nostr-dev-kit/ndk": "^2.14.32",
     "@prisma/client": "^6.10.1",
+    "@sentry/nextjs": "^10.7.0",
+    "@sentry/node": "^10.7.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",

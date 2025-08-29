@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/db';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
+import * as Sentry from '@sentry/nextjs';
 import { randomBytes } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
 
 const TOKEN_SIZE = 16;
 const TOKEN_TTL = 600000; // 10 minutes
@@ -22,6 +23,10 @@ export async function GET(
     }
 
     const { npub } = await params;
+    const span = Sentry.getActiveSpan();
+    if (span) {
+      span.setAttribute('bunker.signerNpub', npub);
+    }
 
     // Verify the user has access to this key
     const userKey = await prisma.userKeys.findFirst({

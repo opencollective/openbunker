@@ -1,16 +1,17 @@
 // WebSocket polyfill for Node.js
-import WebSocket from 'ws';
-(global as any).WebSocket = WebSocket;
-
 import NDK, {
   NDKNip46Backend,
   NDKPrivateKeySigner,
   Nip46PermitCallbackParams,
 } from '@nostr-dev-kit/ndk';
 import { PrismaClient } from '@prisma/client';
+import WebSocket from 'ws';
 import LoggingNDKNip46Backend from './nip-46-backend';
+import './sentry.daemon';
+(global as any).WebSocket = WebSocket;
 
 import { hexToBytes } from '@noble/hashes/utils'; // already an installed dependency
+import * as Sentry from '@sentry/nextjs';
 import { nip19 } from 'nostr-tools';
 
 // Database connection
@@ -112,18 +113,8 @@ class MultiBunkerServer {
         `Found ${connectionTokens.length} non-expired connection tokens`
       );
 
-      // Group tokens by npub
-      const tokensByNpub = new Map<string, typeof connectionTokens>();
-      for (const token of connectionTokens) {
-        if (!tokensByNpub.has(token.npub)) {
-          tokensByNpub.set(token.npub, []);
-        }
-        tokensByNpub.get(token.npub)!.push(token);
-      }
-
       // Store the data for bunker creation
       this.keys = keys;
-      this.tokensByNpub = tokensByNpub;
     } catch (error) {
       console.error('Error scanning database:', error);
       throw error;
@@ -193,77 +184,95 @@ class MultiBunkerServer {
     npub: string
   ): Promise<boolean> {
     console.log(`Validating connection for ${npub}:`, params);
+    const remoteNpub = nip19.npubEncode(params.pubkey);
 
-    // Check if we have a valid token for this connection
-    if (params.method === 'connect') {
-      const remoteNpub = nip19.npubEncode(params.pubkey);
-      // the signer-side pubkey
-      const signerPubkey = params.params[0];
-      const signerNpub = nip19.npubEncode(signerPubkey);
-      const token = params.params[1];
+    return await Sentry.startSpan(
+      {
+        name: 'validate_connection',
+        op: 'bunker.validate_connection',
+      },
+      async () => {
+        const span = Sentry.getActiveSpan();
+        if (span) {
+          // Add individual metrics
+          span.setAttribute('bunker.signerNpub', npub);
+          span.setAttribute('bunker.remoteNpub', remoteNpub);
+        }
+        // Check if we have a valid token for this connection
+        if (params.method === 'connect') {
+          // the signer-side pubkey
+          const signerPubkey = params.params[0];
+          const signerNpub = nip19.npubEncode(signerPubkey);
+          const token = params.params[1];
 
-      // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
-      const pubkeySession = await prisma.sessions.findFirst({
-        where: {
-          npub: signerNpub,
-          sessionNpub: remoteNpub,
-        },
-      });
-      if (pubkeySession) {
-        console.log('Found existing session for ', remoteNpub, signerPubkey);
-        return true;
-      }
+          // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
+          const pubkeySession = await prisma.sessions.findFirst({
+            where: {
+              npub: signerNpub,
+              sessionNpub: remoteNpub,
+            },
+          });
+          if (pubkeySession) {
+            console.log(
+              'Found existing session for ',
+              remoteNpub,
+              signerPubkey
+            );
+            return true;
+          }
 
-      // If there are no active sessions, we need a connection token
-      const dbToken = await prisma.connectTokens.findFirst({
-        where: {
-          token: token,
-          npub: signerNpub,
-          expiry: {
-            gt: BigInt(Date.now()),
-          },
-        },
-      });
-      if (dbToken) {
-        console.log(`Token: ${token} is valid`);
-        console.log(`DB Token: ${dbToken}`);
-        // The token is used, so we delete it and create a session based on the token
-        // delete token
-        await prisma.connectTokens.delete({
-          where: {
-            token: token,
-          },
-        });
-        // create session
-        await prisma.sessions.create({
-          data: {
-            npub: signerNpub,
-            sessionNpub: remoteNpub,
-            expiresAt: BigInt(Date.now() + 1000 * 60 * 60), // 30 days
-          },
-        });
-        return true;
-      } else {
-        console.log(`Token: ${token} is invalid`);
-        return false;
+          // If there are no active sessions, we need a connection token
+          const dbToken = await prisma.connectTokens.findFirst({
+            where: {
+              token: token,
+              npub: signerNpub,
+              expiry: {
+                gt: BigInt(Date.now()),
+              },
+            },
+          });
+          if (dbToken) {
+            console.log(`Token: ${token} is valid`);
+            console.log(`DB Token: ${dbToken}`);
+            // The token is used, so we delete it and create a session based on the token
+            // delete token
+            await prisma.connectTokens.delete({
+              where: {
+                token: token,
+              },
+            });
+            // create session
+            await prisma.sessions.create({
+              data: {
+                npub: signerNpub,
+                sessionNpub: remoteNpub,
+                expiresAt: BigInt(Date.now() + 1000 * 60 * 60), // 30 days
+              },
+            });
+            return true;
+          } else {
+            console.log(`Token: ${token} is invalid`);
+            return false;
+          }
+        } else {
+          // Check if there is a session active
+          const remoteNpub = nip19.npubEncode(params.pubkey);
+          const session = await prisma.sessions.findFirst({
+            where: {
+              npub: npub,
+              sessionNpub: remoteNpub,
+            },
+          });
+          if (session) {
+            console.log('Found existing session for ', npub, params.pubkey);
+            return true;
+          } else {
+            console.log('No session found for ', npub, remoteNpub);
+            return false;
+          }
+        }
       }
-    } else {
-      // Check if there is a session active
-      const remoteNpub = nip19.npubEncode(params.pubkey);
-      const session = await prisma.sessions.findFirst({
-        where: {
-          npub: npub,
-          sessionNpub: remoteNpub,
-        },
-      });
-      if (session) {
-        console.log('Found existing session for ', npub, params.pubkey);
-        return true;
-      } else {
-        console.log('No session found for ', npub, remoteNpub);
-        return false;
-      }
-    }
+    );
   }
 
   private setupPeriodicScanning() {
@@ -282,7 +291,6 @@ class MultiBunkerServer {
   private async updateBunkerInstances() {
     // Check for new keys that need bunkers
     for (const key of this.keys) {
-      const tokens = this.tokensByNpub.get(key.npub) || [];
       const hasBunker = this.bunkerInstances.has(key.npub);
 
       if (!hasBunker) {
@@ -336,7 +344,6 @@ class MultiBunkerServer {
 
   // Store database scan results
   private keys: any[] = [];
-  private tokensByNpub: Map<string, any[]> = new Map();
 }
 
 // Start the server
