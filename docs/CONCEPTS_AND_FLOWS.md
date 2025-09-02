@@ -11,7 +11,7 @@
 - remote-signer-keypair/pubkey: The keys used by remote-signer to encrypt content and communicate with client. This keypair MAY be same as user-keypair, but not necessarily.
 - user-keypair/pubkey: The actual keys representing user (that will be used to sign events in response to sign_event requests, for example). The remote-signer generally has control over these keys.
 
-- bunker connection tokens : `bunker://{pubkey}?relays={relay}&secret={secret}
+- bunker connection tokens : `bunker://{remote-signer-pubkey}?relays={relay}&secret={secret}
 
 ## Openbunker concepts
 
