@@ -4,10 +4,12 @@ import NDK, {
   NDKEvent,
   NDKKind,
   NDKPrivateKeySigner,
+  NDKRelay,
   NDKRelaySet,
   NDKUser,
 } from '@nostr-dev-kit/ndk';
-import { NostrEvent } from 'nostr-tools';
+import { nip44, NostrEvent } from 'nostr-tools';
+import { hexToBytes } from 'nostr-tools/utils';
 
 export interface NDKRpcRequest {
   id: string;
@@ -30,10 +32,18 @@ export class NDKEncryptedNostrChannelAdapter extends EventEmitter {
   public encryptionType: 'nip04' | 'nip44' = 'nip04';
   private ndk: NDK;
 
-  public constructor(localSigner: NDKPrivateKeySigner, relayUrls?: string[]) {
+  public constructor(
+    localSigner: NDKPrivateKeySigner,
+    relayUrls: WebSocket['url'][]
+  ) {
     super();
     this.localSigner = localSigner;
     this.ndk = new NDK({ signer: this.localSigner });
+    this.relaySet = new NDKRelaySet(
+      new Set(relayUrls.map(url => new NDKRelay(url, undefined, this.ndk))),
+      this.ndk
+    );
+    console.log('Relay set', this.relaySet);
   }
 
   public async parseEvent(
@@ -106,11 +116,12 @@ export class NDKEncryptedNostrChannelAdapter extends EventEmitter {
       pubkey: localUser.pubkey,
     } as NostrEvent);
 
-    event.content = await this.localSigner.encrypt(
-      new NDKUser({ pubkey: remotePubkey }),
-      event.content,
-      this.encryptionType
+    const conversationKey = nip44.v2.utils.getConversationKey(
+      hexToBytes(this.localSigner.privateKey),
+      remotePubkey
     );
+    event.content = nip44.v2.encrypt(event.content, conversationKey);
+
     await event.sign(this.localSigner);
     await event.publish(this.relaySet);
   }

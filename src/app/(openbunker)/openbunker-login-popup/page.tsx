@@ -89,34 +89,65 @@ export default function OpenBunkerLoginPopup() {
       // Check if the key has valid tokens (optional - could be useful for user feedback)
       console.log('Key access verified');
 
-      const npub = key.key.npub;
-      if (!npub) {
-        throw new Error('Invalid key: missing npub');
+      // Get the scope from the session
+      if (!selectedSession) {
+        throw new Error('No session selected');
       }
 
-      console.log('Creating connection token for npub:', npub);
+      // Get the scope slug from the session (this would need to be added to the session data)
+      // For now, we'll need to get this from the session or pass it through
+      // This is a placeholder - the actual implementation depends on how scopeSlug is stored in the session
+      const scopeSlug = selectedSession.user.user_metadata?.scopeSlug;
 
-      let hex: string;
-      try {
-        hex = nip19.decode(npub).data as string;
-        console.log('Decoded hex:', hex);
-      } catch (decodeError) {
-        throw new Error('Invalid key: could not decode npub:' + decodeError);
+      let scopeNpub: string;
+
+      if (scopeSlug) {
+        // Fetch the scope to get its npub
+        const scopeResponse = await fetch(`/api/scopes/${scopeSlug}`);
+        if (!scopeResponse.ok) {
+          throw new Error('Failed to fetch scope information');
+        }
+
+        const scopeData = await scopeResponse.json();
+        const scope = scopeData.scope;
+        if (!scope || !scope.key || !scope.key.npub) {
+          throw new Error('Invalid scope: missing npub');
+        }
+
+        scopeNpub = scope.key.npub;
+        console.log('Using scope npub for bunker URL:', scopeNpub);
+      } else {
+        // Use BUNKER_NPUB environment variable as fallback
+        const bunkerNpub = process.env.NEXT_PUBLIC_BUNKER_NPUB;
+        if (!bunkerNpub) {
+          throw new Error(
+            'No scope associated with this session and BUNKER_NPUB not configured'
+          );
+        }
+        scopeNpub = bunkerNpub;
+        console.log('Using BUNKER_NPUB for bunker URL:', scopeNpub);
       }
 
-      // Call the API to create a connection token
+      // Use the user's key for connection token creation
+      const userNpub = key.key.npub;
+      console.log('Using user key for connection token:', userNpub);
+
+      // Call the API to create a connection token using the user's key
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       try {
-        const response = await fetch(`/api/keys/${npub}/connection-tokens`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}),
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `/api/keys/${userNpub}/connection-tokens`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+            signal: controller.signal,
+          }
+        );
 
         clearTimeout(timeoutId);
 
@@ -153,14 +184,24 @@ export default function OpenBunkerLoginPopup() {
 
         console.log('Connection token created successfully:', token);
 
+        // Decode the scope's npub to get the hex
+        let scopeHex: string;
+        try {
+          scopeHex = nip19.decode(scopeNpub).data as unknown as string;
+          console.log('Decoded scope hex:', scopeHex);
+        } catch (decodeError) {
+          throw new Error(
+            'Invalid scope npub: could not decode: ' + String(decodeError)
+          );
+        }
+
         // Get the relay URL with fallback
         const relayUrl =
           process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app';
         console.log('Using relay URL:', relayUrl);
 
-        // Create the bunker URL
-        // FIXME
-        const bunkerUrl = `bunker://${hex}?relay=${encodeURIComponent(relayUrl)}&secret=${token}`;
+        // Create the bunker URL using the scope's npub
+        const bunkerUrl = `bunker://${scopeHex}?relay=${encodeURIComponent(relayUrl)}&secret=${token}`;
 
         // Validate the bunker URL
         if (!validateBunkerUrl(bunkerUrl)) {
