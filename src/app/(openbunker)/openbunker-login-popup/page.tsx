@@ -6,9 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Keys } from '@prisma/client';
 import { useSearchParams } from 'next/navigation';
 import { nip19 } from 'nostr-tools';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
-export default function OpenBunkerLoginPopup() {
+function OpenBunkerLoginPopupContent() {
   const [selectedKey, setSelectedKey] = useState<Keys | null>(null);
   const [isCreatingToken, setIsCreatingToken] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
@@ -399,5 +399,34 @@ export default function OpenBunkerLoginPopup() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OpenBunkerLoginPopup() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-purple-100">
+          <div className="container mx-auto px-4 py-8">
+            <div className="max-w-md mx-auto">
+              <div className="text-center mb-6">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  OpenBunker
+                </h1>
+                <p className="text-gray-600">Loading...</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-xl p-6">
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                  <span>Loading...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <OpenBunkerLoginPopupContent />
+    </Suspense>
   );
 }
