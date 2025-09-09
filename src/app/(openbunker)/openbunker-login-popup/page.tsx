@@ -1,44 +1,29 @@
 'use client';
 
 import KeySelector from '@/components/KeySelector';
-import SessionSelector from '@/components/SessionSelector';
+import OpenBunkerLogin from '@/components/OpenBunkerLogin';
 import { useAuth } from '@/contexts/AuthContext';
-import { Session } from '@supabase/supabase-js';
+import { Keys } from '@prisma/client';
+import { useSearchParams } from 'next/navigation';
 import { nip19 } from 'nostr-tools';
-import { useState } from 'react';
-
-interface UserKey {
-  id: string;
-  userId: string;
-  npub: string;
-  name?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  key: {
-    npub: string;
-    name?: string;
-    avatar?: string;
-    relays?: string[];
-    email?: string;
-  };
-}
-
-type Step = 'session' | 'key';
+import { useEffect, useState } from 'react';
 
 export default function OpenBunkerLoginPopup() {
-  const [currentStep, setCurrentStep] = useState<Step>('session');
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [selectedKey, setSelectedKey] = useState<UserKey | null>(null);
+  const [selectedKey, setSelectedKey] = useState<Keys | null>(null);
   const [isCreatingToken, setIsCreatingToken] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenSuccess, setTokenSuccess] = useState<string | null>(null);
+  const [scopeSlug, setScopeSlug] = useState<string | null>(null);
   const { user } = useAuth();
+  const searchParams = useSearchParams();
 
-  const handleSessionSelected = (session: Session) => {
-    setSelectedSession(session);
-    setCurrentStep('key');
-  };
+  // Parse scope parameter from URL
+  useEffect(() => {
+    const scope = searchParams.get('scope');
+    if (scope) {
+      setScopeSlug(scope);
+    }
+  }, [searchParams]);
 
   const validateBunkerUrl = (url: string): boolean => {
     try {
@@ -53,7 +38,7 @@ export default function OpenBunkerLoginPopup() {
     }
   };
 
-  const handleKeySelected = async (key: UserKey) => {
+  const handleKeySelected = async (key: Keys) => {
     // Prevent multiple simultaneous token creation attempts
     if (isCreatingToken) {
       console.log('Token creation already in progress, ignoring request');
@@ -77,29 +62,19 @@ export default function OpenBunkerLoginPopup() {
       console.log('User authenticated:', user.id);
 
       // Check if the key belongs to the current user
-      if (key.userId !== user.id) {
+      if (key.email !== user.email) {
         throw new Error("You don't have access to this key");
-      }
-
-      // Check if the key is active
-      if (!key.isActive) {
-        throw new Error('This key is not active and cannot be used');
       }
 
       // Check if the key has valid tokens (optional - could be useful for user feedback)
       console.log('Key access verified');
 
-      // Get the scope from the session
-      if (!selectedSession) {
-        throw new Error('No session selected');
-      }
-
-      // Get the scope slug from the session (this would need to be added to the session data)
-      // For now, we'll need to get this from the session or pass it through
-      // This is a placeholder - the actual implementation depends on how scopeSlug is stored in the session
-      const scopeSlug = selectedSession.user.user_metadata?.scopeSlug;
+      // Get the scope slug from the user metadata
+      // This assumes the session is already set and we can access user metadata
+      const scopeSlug = key?.scopeSlug;
 
       let scopeNpub: string;
+      console.log('Scope slug:', scopeSlug);
 
       if (scopeSlug) {
         // Fetch the scope to get its npub
@@ -129,7 +104,7 @@ export default function OpenBunkerLoginPopup() {
       }
 
       // Use the user's key for connection token creation
-      const userNpub = key.key.npub;
+      const userNpub = key.npub;
       console.log('Using user key for connection token:', userNpub);
 
       // Call the API to create a connection token using the user's key
@@ -241,13 +216,6 @@ export default function OpenBunkerLoginPopup() {
     }
   };
 
-  const handleBackToSession = () => {
-    setCurrentStep('session');
-    setSelectedKey(null);
-    setTokenError(null);
-    setTokenSuccess(null);
-  };
-
   const handlePopupCallback = (bunkerConnectionToken: string) => {
     // Check if we're in a popup window
     if (window.opener && !window.opener.closed) {
@@ -278,43 +246,34 @@ export default function OpenBunkerLoginPopup() {
     }
   };
 
-  const renderStepIndicator = () => {
+  // If user is not authenticated, show the login component
+  if (!user) {
     return (
-      <div className="flex items-center justify-center mb-6">
-        <div className="flex items-center space-x-4">
-          <div
-            className={`flex items-center ${currentStep === 'session' ? 'text-indigo-600' : 'text-gray-400'}`}
-          >
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                currentStep === 'session'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              1
+      <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-purple-100">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            <div className="text-center mb-6">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                OpenBunker
+              </h1>
+              <p className="text-gray-600">Authenticate to continue</p>
             </div>
-            <span className="ml-2 text-sm font-medium">Session</span>
-          </div>
-          <div className="w-8 h-1 bg-gray-200 rounded"></div>
-          <div
-            className={`flex items-center ${currentStep === 'key' ? 'text-indigo-600' : 'text-gray-400'}`}
-          >
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                currentStep === 'key'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              2
+
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <OpenBunkerLogin isInPopup={true} />
             </div>
-            <span className="ml-2 text-sm font-medium">Key</span>
+
+            {/* Footer */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-500">
+                Please authenticate to access your Nostr identities
+              </p>
+            </div>
           </div>
         </div>
       </div>
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-purple-100">
@@ -324,136 +283,117 @@ export default function OpenBunkerLoginPopup() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               OpenBunker
             </h1>
-            <p className="text-gray-600">Authentication Setup</p>
+            <p className="text-gray-600">Choose your Nostr identity</p>
           </div>
 
-          {renderStepIndicator()}
-
           <div className="bg-white rounded-2xl shadow-xl p-6">
-            {currentStep === 'session' ? (
-              <SessionSelector onSessionSelected={handleSessionSelected} />
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Choose Key
-                  </h3>
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Choose Identity
+              </h3>
+
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-4 h-4 text-indigo-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {user.user_metadata?.full_name ||
+                        user.user_metadata?.name ||
+                        user.email?.split('@')[0] ||
+                        'User'}
+                    </p>
+                    <p className="text-xs text-gray-600">{user.email}</p>
+                  </div>
+                </div>
+              </div>
+
+              <KeySelector
+                onKeySelected={handleKeySelected}
+                selectedKeyId={selectedKey?.npub}
+                disabled={isCreatingToken}
+                scopeSlug={scopeSlug}
+              />
+
+              {isCreatingToken && (
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                  <span>Creating connection token...</span>
+                </div>
+              )}
+              {tokenError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <svg
+                      className="w-5 h-5 text-red-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="text-red-800 text-sm font-medium">
+                      Error creating token
+                    </span>
+                  </div>
+                  <p className="text-red-700 text-sm mt-1">{tokenError}</p>
                   <button
-                    onClick={handleBackToSession}
-                    className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                    onClick={() =>
+                      selectedKey && handleKeySelected(selectedKey)
+                    }
+                    className="mt-3 px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded-md hover:bg-red-200 transition-colors"
                   >
-                    ← Back to session
+                    Try Again
                   </button>
                 </div>
-
-                {selectedSession && (
-                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-indigo-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {selectedSession.user.user_metadata?.full_name ||
-                            selectedSession.user.user_metadata?.name ||
-                            selectedSession.user.email?.split('@')[0] ||
-                            'User'}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          {selectedSession.user.email}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <KeySelector
-                  onKeySelected={handleKeySelected}
-                  selectedKeyId={selectedKey?.id}
-                  disabled={isCreatingToken}
-                />
-
-                {isCreatingToken && (
-                  <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-                    <span>Creating connection token...</span>
-                  </div>
-                )}
-                {tokenError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-                    <div className="flex items-center space-x-2">
-                      <svg
-                        className="w-5 h-5 text-red-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span className="text-red-800 text-sm font-medium">
-                        Error creating token
-                      </span>
-                    </div>
-                    <p className="text-red-700 text-sm mt-1">{tokenError}</p>
-                    <button
-                      onClick={() =>
-                        selectedKey && handleKeySelected(selectedKey)
-                      }
-                      className="mt-3 px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded-md hover:bg-red-200 transition-colors"
+              )}
+              {tokenSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <svg
+                      className="w-5 h-5 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      Try Again
-                    </button>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="text-green-800 text-sm font-medium">
+                      {tokenSuccess}
+                    </span>
                   </div>
-                )}
-                {tokenSuccess && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-                    <div className="flex items-center space-x-2">
-                      <svg
-                        className="w-5 h-5 text-green-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span className="text-green-800 text-sm font-medium">
-                        {tokenSuccess}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
-              {currentStep === 'session'
-                ? 'Select your Discord session to continue'
-                : 'Choose a Nostr key to complete authentication'}
+              Choose a Nostr identity to complete authentication
             </p>
           </div>
         </div>

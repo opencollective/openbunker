@@ -24,11 +24,10 @@ export async function GET(
     const { npub } = await params;
 
     // Verify the user has access to this key
-    const userKey = await prisma.userKeys.findFirst({
+    const userKey = await prisma.keys.findFirst({
       where: {
-        userId: user.id,
+        email: user.email,
         npub: npub,
-        isActive: true,
       },
     });
 
@@ -99,11 +98,10 @@ export async function POST(
     const { subNpub } = body;
 
     // Verify the user has access to this key
-    const userKey = await prisma.userKeys.findFirst({
+    const userKey = await prisma.keys.findFirst({
       where: {
-        userId: user.id,
+        email: user.email,
         npub: npub,
-        isActive: true,
       },
     });
 
@@ -179,11 +177,10 @@ export async function DELETE(
     }
 
     // Verify the user has access to this key
-    const userKey = await prisma.userKeys.findFirst({
+    const userKey = await prisma.keys.findFirst({
       where: {
-        userId: user.id,
+        email: user.email,
         npub: npub,
-        isActive: true,
       },
     });
 

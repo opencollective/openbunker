@@ -1,35 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface UserKey {
-  id: string;
-  userId: string;
-  npub: string;
-  name?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  key: {
-    npub: string;
-    name?: string;
-    avatar?: string;
-    relays?: string[];
-    email?: string;
-  };
-}
+import { Keys } from '@prisma/client';
+import { useCallback, useEffect, useState } from 'react';
 
 interface UseUserKeysReturn {
-  keys: UserKey[];
+  keys: Keys[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
-export function useUserKeys(): UseUserKeysReturn {
+export function useUserKeys(scopeSlug?: string | null): UseUserKeysReturn {
   const { user } = useAuth();
-  const [keys, setKeys] = useState<UserKey[]>([]);
+  const [keys, setKeys] = useState<Keys[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +27,10 @@ export function useUserKeys(): UseUserKeysReturn {
     setError(null);
 
     try {
-      const response = await fetch('/api/keys');
+      const url = scopeSlug
+        ? `/api/keys?scope=${encodeURIComponent(scopeSlug)}`
+        : '/api/keys';
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch keys');
       }
@@ -56,7 +43,7 @@ export function useUserKeys(): UseUserKeysReturn {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, scopeSlug]);
 
   useEffect(() => {
     fetchKeys();

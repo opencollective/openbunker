@@ -33,11 +33,6 @@ export async function GET(
       return NextResponse.json({ error: 'Scope not found' }, { status: 404 });
     }
 
-    // Check if the user owns this scope
-    if (scope.owner !== user.id) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
     // Return scope with its key
     const scopeWithKey = {
       ...scope,

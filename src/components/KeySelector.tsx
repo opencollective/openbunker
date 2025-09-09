@@ -1,38 +1,24 @@
 'use client';
 
-import { useState } from 'react';
 import { useUserKeys } from '@/hooks/useUserKeys';
+import { Keys } from '@prisma/client';
+import { useState } from 'react';
 import CreateKeyModal from './CreateKeyModal';
 
-interface UserKey {
-  id: string;
-  userId: string;
-  npub: string;
-  name?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  key: {
-    npub: string;
-    name?: string;
-    avatar?: string;
-    relays?: string[];
-    email?: string;
-  };
-}
-
 interface KeySelectorProps {
-  onKeySelected?: (key: UserKey) => void;
+  onKeySelected?: (key: Keys) => void;
   selectedKeyId?: string;
   disabled?: boolean;
+  scopeSlug?: string | null;
 }
 
 export default function KeySelector({
   onKeySelected,
   selectedKeyId,
   disabled = false,
+  scopeSlug,
 }: KeySelectorProps) {
-  const { keys, loading, error, refetch } = useUserKeys();
+  const { keys, loading, error, refetch } = useUserKeys(scopeSlug);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -51,7 +37,7 @@ export default function KeySelector({
     return `${npub.substring(0, 10)}...${npub.substring(npub.length - 10)}`;
   };
 
-  const handleKeySelect = (key: UserKey) => {
+  const handleKeySelect = (key: Keys) => {
     if (disabled || !onKeySelected) {
       return;
     }
@@ -72,7 +58,7 @@ export default function KeySelector({
   if (error) {
     return (
       <div className="text-center py-4">
-        <div className="text-red-500 mb-2">Error loading keys</div>
+        <div className="text-red-500 mb-2">Error loading identities</div>
         <button
           onClick={refetch}
           className="text-sm text-indigo-600 hover:text-indigo-700"
@@ -87,12 +73,14 @@ export default function KeySelector({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Create New Key</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            Create New Identity
+          </h3>
           <button
             onClick={() => setShowCreateModal(false)}
             className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
-            ← Back to keys
+            ← Back to identities
           </button>
         </div>
         <CreateKeyModal
@@ -109,7 +97,7 @@ export default function KeySelector({
               });
 
               if (!response.ok) {
-                throw new Error('Failed to create key');
+                throw new Error('Failed to create identity');
               }
 
               setShowCreateModal(false);
@@ -143,10 +131,14 @@ export default function KeySelector({
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No Keys Available
+            {scopeSlug
+              ? `No Identities Available for Scope: ${scopeSlug}`
+              : 'No Identities Available'}
           </h3>
           <p className="text-gray-600 mb-4">
-            Create your first Nostr key to get started
+            {scopeSlug
+              ? `No identities found for the "${scopeSlug}" scope. Create a new identity for this scope.`
+              : 'Create your first Nostr identity to get started'}
           </p>
         </div>
         <button
@@ -156,7 +148,7 @@ export default function KeySelector({
             disabled ? 'opacity-60 cursor-not-allowed' : ''
           }`}
         >
-          Create New Key
+          Create New Identity
         </button>
       </div>
     );
@@ -165,19 +157,25 @@ export default function KeySelector({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Choose Key</h3>
-        <p className="text-gray-600">Select a Nostr key to authenticate with</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          {scopeSlug ? `Choose Identity for ${scopeSlug}` : 'Choose Identity'}
+        </h3>
+        <p className="text-gray-600">
+          {scopeSlug
+            ? `Select a Nostr identity for the "${scopeSlug}" scope`
+            : 'Select a Nostr identity to authenticate with'}
+        </p>
       </div>
 
       {/* Keys List */}
       <div className="space-y-3">
         {keys.map(key => (
           <div
-            key={key.id}
+            key={key.npub}
             className={`border rounded-lg p-4 transition-all ${
               disabled
                 ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-60'
-                : selectedKeyId === key.id
+                : selectedKeyId === key.npub
                   ? 'border-indigo-500 bg-indigo-50 cursor-pointer'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer'
             }`}
@@ -191,13 +189,10 @@ export default function KeySelector({
                       {key.name?.charAt(0).toUpperCase() || 'K'}
                     </span>
                   </div>
-                  {key.isActive && (
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                  )}
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-900">
-                    {key.name || 'Unnamed Key'}
+                    {key.name || 'Unnamed Identity'}
                   </h4>
                   <p className="text-sm text-gray-600 font-mono">
                     {formatNpub(key.npub)}
@@ -209,7 +204,7 @@ export default function KeySelector({
                   onClick={e => {
                     e.stopPropagation();
                     if (!disabled) {
-                      copyToClipboard(key.npub, key.id);
+                      copyToClipboard(key.npub, key.npub);
                     }
                   }}
                   className={`p-1 transition-colors ${
@@ -217,10 +212,10 @@ export default function KeySelector({
                       ? 'text-gray-300 cursor-not-allowed'
                       : 'text-gray-400 hover:text-gray-600'
                   }`}
-                  title="Copy public key"
+                  title="Copy public identity"
                   disabled={disabled}
                 >
-                  {copied === key.id ? (
+                  {copied === key.npub ? (
                     <svg
                       className="w-4 h-4 text-green-500"
                       fill="none"
@@ -250,7 +245,7 @@ export default function KeySelector({
                     </svg>
                   )}
                 </button>
-                {selectedKeyId === key.id && (
+                {selectedKeyId === key.npub && (
                   <div className="w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center">
                     <svg
                       className="w-3 h-3 text-white"
@@ -270,9 +265,14 @@ export default function KeySelector({
               </div>
             </div>
 
-            {key.key.email && (
-              <div className="mt-2 text-xs text-gray-500">
-                Email: {key.key.email}
+            {(key.email || key.scopeSlug) && (
+              <div className="mt-2 text-xs text-gray-500 space-y-1">
+                {key.email && <div>Email: {key.email}</div>}
+                {key.scopeSlug && (
+                  <div className="text-blue-600 font-medium">
+                    Scope: {key.scopeSlug}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -283,10 +283,10 @@ export default function KeySelector({
       <div className="border-t border-gray-200 pt-6">
         <div className="text-center">
           <h4 className="text-md font-medium text-gray-900 mb-2">
-            Need a New Key?
+            Need a New Identity?
           </h4>
           <p className="text-sm text-gray-600 mb-4">
-            Create a new Nostr key for this session
+            Create a new Nostr identity for this session
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -310,7 +310,7 @@ export default function KeySelector({
                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"
               />
             </svg>
-            Create New Key
+            Create New Identity
           </button>
         </div>
       </div>

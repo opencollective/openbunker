@@ -3,13 +3,22 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 
-export default function OpenBunkerLogin() {
+interface OpenBunkerLoginProps {
+  isInPopup?: boolean;
+}
+
+export default function OpenBunkerLogin({
+  isInPopup = false,
+}: OpenBunkerLoginProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showMagicLinkForm, setShowMagicLinkForm] = useState(false);
   const [email, setEmail] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
-  const { authenticateWithOpenBunker, sendMagicLink } = useAuth();
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const { authenticateWithOpenBunker, sendMagicLink, signIn, handleOtp } =
+    useAuth();
 
   const handleOpenBunkerAuth = async () => {
     setLoading(true);
@@ -41,6 +50,48 @@ export default function OpenBunkerLogin() {
       setError(
         err instanceof Error ? err.message : 'Failed to send magic link'
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOTP = async () => {
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await signIn(email);
+      setOtpSent(true);
+      setError('');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to send verification code'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otpCode || otpCode.length < 6) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await handleOtp(email, otpCode);
+      console.log('OTP verified successfully');
+      // The auth state change will be handled by the AuthContext
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to verify code');
     } finally {
       setLoading(false);
     }
@@ -97,7 +148,7 @@ export default function OpenBunkerLogin() {
           </div>
         </div>
 
-        {/* Magic Link Login Option */}
+        {/* Email Login Option - Different behavior for popup vs regular page */}
         {!showMagicLinkForm ? (
           <button
             onClick={() => setShowMagicLinkForm(true)}
@@ -117,7 +168,9 @@ export default function OpenBunkerLogin() {
                 d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
               />
             </svg>
-            <span>Login with Magic Link</span>
+            <span>
+              {isInPopup ? 'Login with Email & OTP' : 'Login with Magic Link'}
+            </span>
           </button>
         ) : (
           <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
@@ -134,12 +187,54 @@ export default function OpenBunkerLogin() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={magicLinkSent}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+                disabled={isInPopup ? otpSent : magicLinkSent}
               />
             </div>
 
-            {!magicLinkSent ? (
+            {/* OTP Code input - only shown in popup after code is sent */}
+            {isInPopup && otpSent && (
+              <div>
+                <label
+                  htmlFor="otp"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Verification Code
+                </label>
+                <input
+                  type="text"
+                  id="otp"
+                  value={otpCode}
+                  onChange={e => setOtpCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg tracking-widest text-gray-900 placeholder-gray-500"
+                />
+              </div>
+            )}
+
+            {/* Action buttons based on context */}
+            {isInPopup ? (
+              // Popup: OTP flow
+              !otpSent ? (
+                <button
+                  onClick={handleSendOTP}
+                  disabled={loading || !email}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {loading ? 'Sending...' : 'Send Verification Code'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleVerifyOTP}
+                  disabled={loading || !otpCode || otpCode.length < 6}
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {loading ? 'Verifying...' : 'Verify Code'}
+                </button>
+              )
+            ) : // Regular page: Magic link flow
+            !magicLinkSent ? (
               <button
                 onClick={handleSendMagicLink}
                 disabled={loading || !email}
@@ -150,13 +245,25 @@ export default function OpenBunkerLogin() {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-500">
-                  Check your email for a one-time password.
+                  Check your email for a magic link to complete login.
                 </p>
               </div>
             )}
 
+            {/* Status messages */}
+            {isInPopup && otpSent && !otpCode && (
+              <p className="text-sm text-gray-500">
+                Check your email for a 6-digit verification code.
+              </p>
+            )}
+
             <button
-              onClick={() => setShowMagicLinkForm(false)}
+              onClick={() => {
+                setShowMagicLinkForm(false);
+                setOtpSent(false);
+                setOtpCode('');
+                setEmail('');
+              }}
               className="w-full text-gray-500 hover:text-gray-700 text-sm"
             >
               Back to options
@@ -174,7 +281,11 @@ export default function OpenBunkerLogin() {
       <div className="text-center">
         <p className="text-xs text-gray-500">
           <strong>How it works:</strong> Choose between Discord OAuth for a new
-          Nostr key or use a magic link sent to your email.
+          Nostr key or use{' '}
+          {isInPopup
+            ? 'email verification with OTP'
+            : 'a magic link sent to your email'}
+          .
         </p>
       </div>
     </div>

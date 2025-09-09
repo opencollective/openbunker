@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { useUserKeys } from '@/hooks/useUserKeys';
 import ConnectionTokensList from '@/components/ConnectionTokensList';
+import { useUserKeys } from '@/hooks/useUserKeys';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function KeyDetailPage() {
   const params = useParams();
@@ -27,10 +27,6 @@ export default function KeyDetailPage() {
   const formatNpub = (npub: string) => {
     if (npub.length <= 20) return npub;
     return `${npub.substring(0, 10)}...${npub.substring(npub.length - 10)}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
   };
 
   // Debug logging
@@ -158,7 +154,7 @@ export default function KeyDetailPage() {
           </Link>
 
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {userKey.name || userKey.key.name || 'Unnamed Key'}
+            {userKey.name || userKey.name || 'Unnamed Key'}
           </h1>
           <p className="text-lg text-gray-600">
             Key Details and Connection Tokens
@@ -219,22 +215,22 @@ export default function KeyDetailPage() {
                     </div>
                   </div>
 
-                  {userKey.key.email && (
+                  {userKey.email && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Email
                       </label>
-                      <p className="text-gray-900">{userKey.key.email}</p>
+                      <p className="text-gray-900">{userKey.email}</p>
                     </div>
                   )}
 
-                  {userKey.key.relays && userKey.key.relays.length > 0 && (
+                  {userKey.relays && userKey.relays.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Connected Relays ({userKey.key.relays.length})
+                        Connected Relays ({userKey.relays.length})
                       </label>
                       <div className="space-y-1">
-                        {userKey.key.relays.map((relay, index) => (
+                        {userKey.relays.map((relay, index) => (
                           <div
                             key={index}
                             className="text-sm text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded"
@@ -245,40 +241,6 @@ export default function KeyDetailPage() {
                       </div>
                     </div>
                   )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Status
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <div
-                          className={`w-2 h-2 rounded-full ${userKey.isActive ? 'bg-green-500' : 'bg-gray-400'}`}
-                        ></div>
-                        <span className="text-sm text-gray-900">
-                          {userKey.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Created
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {formatDate(userKey.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Updated
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {formatDate(userKey.updatedAt)}
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>

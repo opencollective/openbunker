@@ -144,3 +144,91 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id, name, description, slug } = body;
+
+    if (!id || !name || !description || !slug) {
+      return NextResponse.json(
+        { error: 'ID, name, description, and slug are required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if the scope exists and belongs to the user
+    const existingScope = await prisma.scopes.findFirst({
+      where: {
+        id: id,
+        owner: user.id,
+      },
+    });
+
+    if (!existingScope) {
+      return NextResponse.json(
+        { error: 'Scope not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    // Check if slug is already taken by another scope
+    const slugConflict = await prisma.scopes.findFirst({
+      where: {
+        slug: slug,
+        id: { not: id },
+      },
+    });
+
+    if (slugConflict) {
+      return NextResponse.json(
+        { error: 'Scope slug already exists' },
+        { status: 409 }
+      );
+    }
+
+    // Update the scope
+    const updatedScope = await prisma.scopes.update({
+      where: {
+        id: id,
+      },
+      data: {
+        name: name,
+        description: description,
+        slug: slug,
+        updatedAt: new Date(),
+      },
+      include: {
+        key: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      scope: {
+        ...updatedScope,
+        key: {
+          npub: updatedScope.key.npub,
+          nsec: updatedScope.key.nsec,
+          name: updatedScope.key.name,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error updating scope:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
