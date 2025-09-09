@@ -219,7 +219,7 @@ class MultiBunkerServer {
           npub,
           nsec,
         },
-        scope,
+        scope.slug,
         relays
       );
 

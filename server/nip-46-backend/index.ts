@@ -1,6 +1,14 @@
 import { prisma } from '@/lib/db';
 import { NDKEvent, NDKPrivateKeySigner, NIP46Method } from '@nostr-dev-kit/ndk';
-import { nip19, NostrEvent, SimplePool } from 'nostr-tools';
+import { Keys } from '@prisma/client';
+import { createClient } from '@supabase/supabase-js';
+import {
+  generateSecretKey,
+  getPublicKey,
+  nip19,
+  NostrEvent,
+  SimplePool,
+} from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 import { hexToBytes } from 'nostr-tools/utils';
 import { decrypt, encrypt } from './encryptUtils';
@@ -96,6 +104,7 @@ export default class Nip46ScopedDaemon {
       const userKey = await prisma.keys.findUnique({
         where: {
           npub: session.npub,
+          scopeSlug: session.scopeSlug,
         },
         select: {
           ncryptsec: true,
@@ -119,6 +128,42 @@ export default class Nip46ScopedDaemon {
     }
   }
 
+  private async getOrCreateKeyFromEmail(
+    email: string,
+    scope: string | null
+  ): Promise<Keys | null> {
+    const existingKey = await prisma.keys.findFirst({
+      where: {
+        email: email,
+        scopeSlug: scope,
+      },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let keyToReturn: any = existingKey;
+    if (!existingKey) {
+      // Generate a new Nostr key pair for the new user
+      const secretKey = generateSecretKey();
+      const publicKey = getPublicKey(secretKey);
+      const npub = nip19.npubEncode(publicKey);
+      // Create the key in the database
+      const newKey = await prisma.keys.create({
+        data: {
+          npub: npub,
+          name: email,
+          email: email,
+          relays: [],
+          enckey: '',
+          profile: { name: email },
+          ncryptsec: Buffer.from(secretKey).toString('hex'),
+          scopeSlug: scope,
+        },
+      });
+      keyToReturn = newKey;
+    }
+    return keyToReturn;
+  }
+
   private async validateAndGetUserSession(
     params: Nip46RPCCallParams
   ): Promise<SessionInfo | null> {
@@ -135,7 +180,6 @@ export default class Nip46ScopedDaemon {
       // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
       const pubkeySession = await prisma.sessions.findFirst({
         where: {
-          // npub: signerNpub,
           sessionNpub: remoteNpub,
           scopeSlug: this.bunkerScope || null,
         },
@@ -148,7 +192,7 @@ export default class Nip46ScopedDaemon {
         );
         return pubkeySession;
       }
-      // FIXME
+
       console.log(
         'No existing session found for ',
         remoteNpub,
@@ -187,7 +231,54 @@ export default class Nip46ScopedDaemon {
         });
         return newSession;
       } else {
-        console.log(`Token: ${token} is invalid`);
+        console.log(`Token: ${token} is not created in the database`);
+
+        const [secret, email] = token.split('+');
+
+        if (secret.length === 6 && email) {
+          // We'll assume the token was sent by email to the user, attempt to verify it
+          if (
+            !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+            !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          ) {
+            console.error('Missing Supabase environment variables');
+            return null;
+          }
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          );
+
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token: secret,
+            type: 'email',
+            email: email,
+          });
+          if (verifyError) {
+            console.log(`Token: ${token} is invalid`);
+            return null;
+          } else {
+            console.log(`Token: ${token} is valid, creating session`);
+
+            const key = await this.getOrCreateKeyFromEmail(
+              email,
+              this.bunkerScope
+            );
+            if (!key) {
+              console.log(`Key: ${email} is not found in the database`);
+              return null;
+            }
+            const newSession = await prisma.sessions.create({
+              data: {
+                npub: key.npub,
+                sessionNpub: remoteNpub,
+                scopeSlug: this.bunkerScope || null,
+                expiresAt: BigInt(Date.now() + 1000 * 60 * 60 * 24 * 90), // 90 days
+              },
+            });
+            return newSession;
+          }
+        }
         return null;
       }
     } else {
@@ -286,12 +377,14 @@ export default class Nip46ScopedDaemon {
       if (method === 'connect') {
         response = await this.handleConnect(nip46RPCCallParams);
         console.log('connect request from ', remotePubkey, ' allowed');
-        this.encryptedAdapter.sendResponse(id, remotePubkey, response);
+        await this.encryptedAdapter.sendResponse(id, remotePubkey, response);
         return;
       }
 
+      console.log('method', method, 'params', params);
       // Verify permissions and get session
       const session = await this.validateAndGetUserSession(nip46RPCCallParams);
+      console.log('session', session);
       if (session == null) {
         // send error
         this.encryptedAdapter.sendResponse(
@@ -366,8 +459,6 @@ export default class Nip46ScopedDaemon {
   ): Promise<string> {
     const [signerPubkey, token] = nip46RPCCallParams.params; //[<remote-signer-pubkey>, <optional_secret>, <optional_requested_permissions>]
     const session = await this.validateAndGetUserSession(nip46RPCCallParams);
-
-    console.log('connect request from ', nip46RPCCallParams.pubkey, ' allowed');
     return 'ack';
   }
 
