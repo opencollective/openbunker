@@ -2,16 +2,12 @@
 import WebSocket from 'ws';
 (global as any).WebSocket = WebSocket;
 
-import NDK, {
-  NDKNip46Backend,
-  NDKPrivateKeySigner,
-  Nip46PermitCallbackParams,
-} from '@nostr-dev-kit/ndk';
+import NDK, { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
 import { PrismaClient } from '@prisma/client';
-import LoggingNDKNip46Backend from './nip-46-backend';
+import Nip46ScopedDaemon from './nip-46-backend';
 
-import { hexToBytes } from '@noble/hashes/utils'; // already an installed dependency
-import { nip19 } from 'nostr-tools';
+import { hexToBytes } from '@noble/hashes/utils';
+import { getPublicKey, nip19 } from 'nostr-tools';
 
 // Database connection
 const prisma = new PrismaClient();
@@ -22,13 +18,8 @@ const relays = ['wss://relay.nsec.app'];
 console.log('Starting Multi-Bunker Server...');
 console.log(`Connecting to relays: ${relays.join(', ')}`);
 
-interface BunkerInstance {
-  npub: string;
-  signer: NDKPrivateKeySigner;
-  backend: NDKNip46Backend;
-}
 class MultiBunkerServer {
-  private bunkerInstances: Map<string, BunkerInstance> = new Map();
+  private bunkerInstances: Map<string, Nip46ScopedDaemon> = new Map();
   private isRunning = false;
   private ndk: NDK;
 
@@ -82,21 +73,17 @@ class MultiBunkerServer {
   }
 
   private async scanDatabase() {
-    console.log('Scanning database for keys and connection tokens...');
+    console.log('Scanning database for scopes and connection tokens...');
 
     try {
-      // Get all keys from the database
-      const keys = await prisma.keys.findMany({
+      // Get all scopes with their associated keys
+      const scopes = await prisma.scopes.findMany({
         include: {
-          userKeys: {
-            where: {
-              isActive: true,
-            },
-          },
+          key: true,
         },
       });
 
-      console.log(`Found ${keys.length} keys in database`);
+      console.log(`Found ${scopes.length} scopes in database`);
 
       // Get all non-expired connection tokens
       const now = BigInt(Date.now());
@@ -122,8 +109,7 @@ class MultiBunkerServer {
       }
 
       // Store the data for bunker creation
-      this.keys = keys;
-      this.tokensByNpub = tokensByNpub;
+      this.scopes = scopes;
     } catch (error) {
       console.error('Error scanning database:', error);
       throw error;
@@ -133,164 +119,157 @@ class MultiBunkerServer {
   private async startAllBunkers() {
     console.log('Starting bunker instances...');
 
-    for (const key of this.keys) {
+    // Start the main bunker using environment variables
+    try {
+      await this.startMainBunker();
+    } catch (error) {
+      console.error('Error starting main bunker:', error);
+    }
+
+    // Start bunkers for each scope
+    for (const scope of this.scopes) {
       try {
-        await this.startBunkerForKey(key);
+        await this.startBunkerForScope(scope);
       } catch (error) {
-        console.error(`Error starting bunker for key ${key.npub}:`, error);
+        console.error(`Error starting bunker for scope ${scope.slug}:`, error);
       }
     }
 
     console.log(`Started ${this.bunkerInstances.size} bunker instances`);
   }
 
-  private async startBunkerForKey(key: any) {
-    console.log(`Starting bunker for key: ${key.npub}`);
+  private async startMainBunker() {
+    console.log('Starting main bunker...');
 
-    // Check if we have the private key
-    const privateKey = key.ncryptsec;
-    const privateKeyBytes = hexToBytes(privateKey);
+    const bunkerNsec = process.env.BUNKER_NSEC;
+    const bunkerNpub = process.env.BUNKER_NPUB;
 
-    if (!privateKey) {
-      console.log(`No private key found for ${key.npub} - skipping`);
+    if (!bunkerNsec || !bunkerNpub) {
+      console.log('BUNKER_NSEC or BUNKER_NPUB not set - skipping main bunker');
       return;
     }
 
-    // Create signer using the shared NDK instance
-    const signer = new NDKPrivateKeySigner(privateKeyBytes);
-    console.log(`Created signer for ${key.npub}: ${signer.pubkey}`);
+    try {
+      // Decode the nsec to get the private key bytes
+      const decoded = nip19.decode(bunkerNsec);
+      const privateKeyBytes = decoded.data as unknown as Uint8Array;
+      const pubkeyHex = nip19.decode(bunkerNpub);
 
-    // Create NIP-46 backend with token validation using the shared NDK instance
-    const backend = new LoggingNDKNip46Backend(
-      this.ndk,
-      signer,
-      async (params: Nip46PermitCallbackParams) => {
-        return await this.validateConnection(params, key.npub);
-      },
-      key.npub
-    );
+      // Create signer using the shared NDK instance
+      const signer = new NDKPrivateKeySigner(privateKeyBytes);
+      console.log(`Created main bunker signer: ${signer.pubkey}`);
 
-    // Start backend
-    backend.start().then(() => {
-      console.log(`Started backend for ${key.npub}`);
-    });
-    console.log(`Started backend for ${key.npub}`);
+      // Create NIP-46 backend with token validation using the shared NDK instance
+      const backend = new Nip46ScopedDaemon(
+        {
+          pubKey: pubkeyHex.data as string,
+          privateKey: privateKeyBytes,
+          npub: bunkerNpub,
+          nsec: bunkerNsec,
+        },
+        '',
+        relays
+      );
 
-    // Store the bunker instance
-    this.bunkerInstances.set(key.npub, {
-      npub: key.npub,
-      signer,
-      backend,
-    });
+      // Start backend
+      backend.start().then(() => {
+        console.log('Started main bunker backend');
+      });
 
-    // Log bunker URI for clients
-    const bunkerUri = `bunker://${backend.localUser?.pubkey}?relay=${encodeURIComponent(relays[0])}`;
-    console.log(`\nBunker URI for ${key.npub}:\n  ${bunkerUri}\n`);
+      // Store the bunker instance
+      this.bunkerInstances.set(bunkerNpub, backend);
+
+      // Log bunker URI for clients
+      const bunkerUri = `bunker://${pubkeyHex.data}?relay=${encodeURIComponent(relays[0])}`;
+      console.log(`\nMain Bunker URI:\n  ${bunkerUri}\n`);
+    } catch (error) {
+      console.error('Error starting main bunker:', error);
+      throw error;
+    }
   }
 
-  private async validateConnection(
-    params: Nip46PermitCallbackParams,
-    npub: string
-  ): Promise<boolean> {
-    console.log(`Validating connection for ${npub}:`, params);
+  private async startBunkerForScope(scope: any) {
+    console.log(`Starting bunker for scope: ${scope.slug}`);
 
-    // Check if we have a valid token for this connection
-    if (params.method === 'connect') {
-      const remoteNpub = nip19.npubEncode(params.pubkey);
-      // the signer-side pubkey
-      const signerPubkey = params.params[0];
-      const signerNpub = nip19.npubEncode(signerPubkey);
-      const token = params.params[1];
+    // Check if we have the private key for this scope
+    const privateKey = scope.key.ncryptsec;
 
-      // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
-      const pubkeySession = await prisma.sessions.findFirst({
-        where: {
-          npub: signerNpub,
-          sessionNpub: remoteNpub,
-        },
-      });
-      if (pubkeySession) {
-        console.log('Found existing session for ', remoteNpub, signerPubkey);
-        return true;
-      }
+    if (!privateKey) {
+      console.log(`No private key found for scope ${scope.slug} - skipping`);
+      return;
+    }
 
-      // If there are no active sessions, we need a connection token
-      const dbToken = await prisma.connectTokens.findFirst({
-        where: {
-          token: token,
-          npub: signerNpub,
-          expiry: {
-            gt: BigInt(Date.now()),
-          },
+    try {
+      // Convert hex string to bytes
+      const privateKeyBytes = hexToBytes(privateKey);
+      const pubKey = getPublicKey(privateKeyBytes);
+      const nsec = nip19.nsecEncode(privateKeyBytes);
+      const npub = nip19.npubEncode(pubKey);
+      // Create signer using the shared NDK instance
+      const signer = new NDKPrivateKeySigner(privateKeyBytes);
+      console.log(
+        `Created scope bunker signer for ${scope.slug}: ${signer.pubkey}`
+      );
+
+      // Create NIP-46 backend with token validation using the shared NDK instance
+      const backend = new Nip46ScopedDaemon(
+        {
+          pubKey: pubKey,
+          privateKey: privateKeyBytes,
+          npub,
+          nsec,
         },
+        scope.slug,
+        relays
+      );
+
+      // Start backend
+      backend.start().then(() => {
+        console.log(`Started scope bunker backend for ${scope.slug}`);
       });
-      if (dbToken) {
-        console.log(`Token: ${token} is valid`);
-        console.log(`DB Token: ${dbToken}`);
-        // The token is used, so we delete it and create a session based on the token
-        // delete token
-        await prisma.connectTokens.delete({
-          where: {
-            token: token,
-          },
-        });
-        // create session
-        await prisma.sessions.create({
-          data: {
-            npub: signerNpub,
-            sessionNpub: remoteNpub,
-            expiresAt: BigInt(Date.now() + 1000 * 60 * 60), // 30 days
-          },
-        });
-        return true;
-      } else {
-        console.log(`Token: ${token} is invalid`);
-        return false;
-      }
-    } else {
-      // Check if there is a session active
-      const remoteNpub = nip19.npubEncode(params.pubkey);
-      const session = await prisma.sessions.findFirst({
-        where: {
-          npub: npub,
-          sessionNpub: remoteNpub,
-        },
-      });
-      if (session) {
-        console.log('Found existing session for ', npub, params.pubkey);
-        return true;
-      } else {
-        console.log('No session found for ', npub, remoteNpub);
-        return false;
-      }
+
+      // Store the bunker instance
+      this.bunkerInstances.set(scope.key.npub, backend);
+
+      // Log bunker URI for clients
+      const bunkerUri = `bunker://${pubKey}?relay=${encodeURIComponent(relays[0])}`;
+      console.log(`\nScope Bunker URI for ${scope.slug}:\n  ${bunkerUri}\n`);
+    } catch (error) {
+      console.error(`Error starting scope bunker for ${scope.slug}:`, error);
+      throw error;
     }
   }
 
   private setupPeriodicScanning() {
-    // Scan for new keys/tokens every 5 seconds
-    setInterval(async () => {
-      console.log('Periodic database scan...');
-      try {
-        await this.scanDatabase();
-        await this.updateBunkerInstances();
-      } catch (error) {
-        console.error('Error in periodic scan:', error);
-      }
-    }, 5 * 1000);
+    // Scan for new scopes/tokens every 5 seconds
+    setInterval(
+      async () => {
+        console.log('Periodic database scan...');
+        try {
+          await this.scanDatabase();
+          await this.updateBunkerInstances();
+        } catch (error) {
+          console.error('Error in periodic scan:', error);
+        }
+      },
+      5 * 60 * 1000
+    );
   }
 
   private async updateBunkerInstances() {
-    // Check for new keys that need bunkers
-    for (const key of this.keys) {
-      const tokens = this.tokensByNpub.get(key.npub) || [];
-      const hasBunker = this.bunkerInstances.has(key.npub);
+    // Check for new scopes that need bunkers
+    for (const scope of this.scopes) {
+      const hasBunker = this.bunkerInstances.has(scope.key.npub);
 
       if (!hasBunker) {
-        console.log(`Starting new bunker for ${key.npub}`);
+        console.log(`Starting new bunker for scope ${scope.slug}`);
         try {
-          await this.startBunkerForKey(key);
+          await this.startBunkerForScope(scope);
         } catch (error) {
-          console.error(`Error starting new bunker for ${key.npub}:`, error);
+          console.error(
+            `Error starting new bunker for scope ${scope.slug}:`,
+            error
+          );
         }
       }
     }
@@ -335,8 +314,7 @@ class MultiBunkerServer {
   }
 
   // Store database scan results
-  private keys: any[] = [];
-  private tokensByNpub: Map<string, any[]> = new Map();
+  private scopes: any[] = [];
 }
 
 // Start the server

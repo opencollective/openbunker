@@ -19,9 +19,16 @@ model Scopes {
   slug      String   @unique
   name      String
   description String
+  owner     String   // User ID who owns this scope
+  keyNpub   String   // Generated key for this scope
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relation to the generated key
+  key       Keys     @relation(fields: [keyNpub], references: [npub], onDelete: Cascade)
+
   @@index([slug])
+  @@index([owner])
 }
 
 model Sessions {
@@ -55,6 +62,7 @@ model UserKeys {
 
 model Keys {
   npub     String @id
+  nsec     String? // Private key for scope keys
   nip05    String?
   name     String?
   avatar   String?
@@ -67,8 +75,9 @@ model Keys {
   email    String?
   scopeSlug String? // Associate keys with specific scopes
 
-  // Relation to UserKeys
+  // Relations
   userKeys UserKeys[]
+  scopes   Scopes[] // Keys can be associated with scopes
   @@index([npub])
   @@index([scopeSlug])
 }
