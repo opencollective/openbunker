@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useUserKeys } from '@/hooks/useUserKeys';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import CreateKeyModal from './CreateKeyModal';
 
 export default function UserKeys() {
@@ -169,7 +169,7 @@ export default function UserKeys() {
       <div className="space-y-4">
         {keys.map(userKey => (
           <div
-            key={userKey.id}
+            key={userKey.npub}
             className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer"
             onClick={() => handleKeyClick(userKey.npub)}
           >
@@ -190,15 +190,20 @@ export default function UserKeys() {
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-900">
-                    {userKey.name || userKey.key.name || 'Unnamed Key'}
+                    {userKey.name || userKey.name || 'Unnamed Key'}
                   </h4>
                   <p className="text-xs text-gray-500 font-mono">
                     {formatNpub(userKey.npub)}
                   </p>
-                  {userKey.key.relays && userKey.key.relays.length > 0 && (
+                  {userKey.scopeSlug && (
+                    <p className="text-xs text-blue-600 mt-1 font-medium">
+                      Scope: {userKey.scopeSlug}
+                    </p>
+                  )}
+                  {userKey.relays && userKey.relays.length > 0 && (
                     <p className="text-xs text-gray-400 mt-1">
-                      {userKey.key.relays.length} relay
-                      {userKey.key.relays.length !== 1 ? 's' : ''} connected
+                      {userKey.relays.length} relay
+                      {userKey.relays.length !== 1 ? 's' : ''} connected
                     </p>
                   )}
                 </div>
@@ -208,12 +213,12 @@ export default function UserKeys() {
                 <button
                   onClick={e => {
                     e.stopPropagation();
-                    copyToClipboard(userKey.npub, userKey.id);
+                    copyToClipboard(userKey.npub, userKey.npub);
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                   title="Copy npub"
                 >
-                  {copied === userKey.id ? (
+                  {copied === userKey.npub ? (
                     <svg
                       className="w-4 h-4 text-green-600"
                       fill="currentColor"
@@ -241,28 +246,12 @@ export default function UserKeys() {
                     </svg>
                   )}
                 </button>
-
-                <div className="flex items-center space-x-1">
-                  <div
-                    className={`w-2 h-2 rounded-full ${userKey.isActive ? 'bg-green-500' : 'bg-gray-400'}`}
-                  ></div>
-                  <span className="text-xs text-gray-500">
-                    {userKey.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
               </div>
             </div>
 
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>
-                  Created: {new Date(userKey.createdAt).toLocaleDateString()}
-                </span>
-                <span>
-                  Updated: {new Date(userKey.updatedAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
+            {/* <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="flex justify-between text-xs text-gray-500"></div>
+            </div> */}
           </div>
         ))}
       </div>

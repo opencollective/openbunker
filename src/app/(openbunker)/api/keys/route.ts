@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/db';
-import { generateSecretKey, getPublicKey } from 'nostr-tools';
-import { nip19 } from 'nostr-tools';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { bytesToHex } from '@noble/hashes/utils';
+import { NextRequest, NextResponse } from 'next/server';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 
 export async function GET() {
   try {
@@ -18,16 +17,15 @@ export async function GET() {
     }
 
     // Get all keys associated with this user
-    const userKeys = await prisma.userKeys.findMany({
+    const userKeys = await prisma.keys.findMany({
       where: {
-        userId: user.id,
-        isActive: true,
+        email: user.email,
       },
-      include: {
-        key: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
+      select: {
+        npub: true,
+        name: true,
+        email: true,
+        scopeSlug: true,
       },
     });
 

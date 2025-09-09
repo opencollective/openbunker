@@ -1,27 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface UserKey {
-  id: string;
-  userId: string;
-  npub: string;
-  name?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  key: {
-    npub: string;
-    name?: string;
-    avatar?: string;
-    relays?: string[];
-    email?: string;
-  };
-}
+import { Keys } from '@prisma/client';
+import { useCallback, useEffect, useState } from 'react';
 
 interface UseUserKeysReturn {
-  keys: UserKey[];
+  keys: Keys[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -29,7 +13,7 @@ interface UseUserKeysReturn {
 
 export function useUserKeys(): UseUserKeysReturn {
   const { user } = useAuth();
-  const [keys, setKeys] = useState<UserKey[]>([]);
+  const [keys, setKeys] = useState<Keys[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
