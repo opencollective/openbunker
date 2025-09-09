@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
     // Send OTP to email
     const { error: otpSendError } = await supabase.auth.signInWithOtp({
       email,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_DEPLOY_URL || window.location.origin}`,
+      },
     });
 
     if (otpSendError) {
