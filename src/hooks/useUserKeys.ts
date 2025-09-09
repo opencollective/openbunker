@@ -11,7 +11,7 @@ interface UseUserKeysReturn {
   refetch: () => Promise<void>;
 }
 
-export function useUserKeys(): UseUserKeysReturn {
+export function useUserKeys(scopeSlug?: string | null): UseUserKeysReturn {
   const { user } = useAuth();
   const [keys, setKeys] = useState<Keys[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,10 @@ export function useUserKeys(): UseUserKeysReturn {
     setError(null);
 
     try {
-      const response = await fetch('/api/keys');
+      const url = scopeSlug
+        ? `/api/keys?scope=${encodeURIComponent(scopeSlug)}`
+        : '/api/keys';
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch keys');
       }
@@ -40,7 +43,7 @@ export function useUserKeys(): UseUserKeysReturn {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, scopeSlug]);
 
   useEffect(() => {
     fetchKeys();

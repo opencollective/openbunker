@@ -1,8 +1,8 @@
 'use client';
 
 import { createClient } from '@/lib/supabase';
+import { Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +13,7 @@ interface AuthContextType {
   authenticateWithOpenBunker: () => Promise<string>;
   checkOpenBunkerCallback: (secretKey: string) => Promise<void>;
   sendMagicLink: (email: string) => Promise<void>;
+  handleOtp: (email: string, token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,17 +73,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string) => {
     try {
       setLoading(true);
-      // Send verification code to email
-      const response = await fetch('/api/auth/send-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not available');
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_DEPLOY_URL || window.location.origin}`,
         },
-        body: JSON.stringify({ email }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to send verification code');
+      if (error) {
+        throw new Error(error.message || 'Failed to send verification code');
       }
 
       console.log('Verification code sent to:', email);
@@ -193,6 +198,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleOtp = async (email: string, token: string) => {
+    try {
+      setLoading(true);
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        throw new Error('Supabase client not available');
+      }
+
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to verify OTP');
+      }
+
+      console.log('OTP verified successfully for:', email);
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       setLoading(true);
@@ -221,6 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authenticateWithOpenBunker,
     checkOpenBunkerCallback,
     sendMagicLink,
+    handleOtp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

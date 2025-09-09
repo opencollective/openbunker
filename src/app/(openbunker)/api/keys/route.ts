@@ -4,7 +4,7 @@ import { bytesToHex } from '@noble/hashes/utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
     const {
@@ -16,11 +16,24 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all keys associated with this user
+    // Get scope parameter from query string
+    const { searchParams } = new URL(request.url);
+    const scopeSlug = searchParams.get('scope');
+
+    // Build where clause
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = {
+      email: user.email,
+    };
+
+    // Add scope filter if provided
+    if (scopeSlug) {
+      whereClause.scopeSlug = scopeSlug;
+    }
+
+    // Get all keys associated with this user (optionally filtered by scope)
     const userKeys = await prisma.keys.findMany({
-      where: {
-        email: user.email,
-      },
+      where: whereClause,
       select: {
         npub: true,
         name: true,
