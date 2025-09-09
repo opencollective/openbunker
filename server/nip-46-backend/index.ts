@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { NDKEvent, NDKPrivateKeySigner, NIP46Method } from '@nostr-dev-kit/ndk';
 import { nip19, NostrEvent, SimplePool } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
+import { hexToBytes } from 'nostr-tools/utils';
 import { decrypt, encrypt } from './encryptUtils';
 import { NDKEncryptedNostrChannelAdapter } from './nostr-rpc';
 
@@ -44,46 +45,10 @@ type SessionHandlerMethod = (
   session: SessionInfo
 ) => Promise<string | undefined>;
 
-// Handler decorator with signature constraint
-function handler(method: string) {
-  return function (
-    target: any,
-    context: ClassMethodDecoratorContext<Nip46ScopedDaemon, HandlerMethod>
-  ) {
-    // Type check: ensure the method matches the expected signature
-    if (!target.constructor._handlers) {
-      target.constructor._handlers = new Map();
-    }
-    target.constructor._handlers.set(method, target[context.name as string]);
-  };
-}
-
-// Session handler decorator with signature constraint and session injection
-function session_handler(method: string) {
-  return function (
-    target: any,
-    context: ClassMethodDecoratorContext<
-      Nip46ScopedDaemon,
-      SessionHandlerMethod
-    >
-  ) {
-    // Type check: ensure the method matches the expected signature
-    if (!target.constructor._sessionHandlers) {
-      target.constructor._sessionHandlers = new Map();
-    }
-    target.constructor._sessionHandlers.set(
-      method,
-      target[context.name as string]
-    );
-  };
-}
-
 // Extended NDKNip46Backend with logging
 export default class Nip46ScopedDaemon {
   // Static property to store handlers
   static _handlers: Map<string, HandlerMethod> = new Map();
-  // Static property to store session handlers
-  static _sessionHandlers: Map<string, SessionHandlerMethod> = new Map();
 
   // Each Daemon has their own pubkey
   private remoteSignerInfo: NostrUserInfo;
@@ -111,47 +76,17 @@ export default class Nip46ScopedDaemon {
       relayUrls ?? []
     );
     this.bunkerScope = scope;
-
-    // Initialize handlers to prevent unused method warnings
-    this.initializeHandlers();
-    this.initializeSessionHandlers();
   }
 
-  // Add this method to explicitly reference all handlers
-  private initializeHandlers(): void {
-    // This method exists solely to prevent unused method warnings
-    // The actual registration happens in the decorators
-    const handlers: HandlerMethod[] = [this.handleConnect];
-
-    // This line ensures the methods are considered "used"
-    handlers.forEach(handler => {
-      if (typeof handler === 'function') {
-        // Method is referenced, preventing unused warnings
-      }
-    });
-  }
-
-  // Add this method to explicitly reference all session handlers
-  private initializeSessionHandlers(): void {
-    // This method exists solely to prevent unused method warnings
-    // The actual registration happens in the decorators
-    const sessionHandlers: SessionHandlerMethod[] = [
-      this.handleGetPublicKey,
-      this.handleNip04Decrypt,
-      this.handleNip44Decrypt,
-      this.handleNip44Encrypt,
-      this.handleNip04Encrypt,
-      this.handlePing,
-      this.handleSignEvent,
-    ];
-
-    // This line ensures the methods are considered "used"
-    sessionHandlers.forEach(handler => {
-      if (typeof handler === 'function') {
-        // Method is referenced, preventing unused warnings
-      }
-    });
-  }
+  sessionHandlers: Map<string, SessionHandlerMethod> = new Map([
+    ['get_public_key', this.handleGetPublicKey],
+    ['nip04_decrypt', this.handleNip04Decrypt],
+    ['nip04_encrypt', this.handleNip04Encrypt],
+    ['nip44_decrypt', this.handleNip44Decrypt],
+    ['nip44_encrypt', this.handleNip44Encrypt],
+    ['ping', this.handlePing],
+    ['sign_event', this.handleSignEvent],
+  ]);
 
   private async getUserPrivateKey(
     session: SessionInfo
@@ -163,18 +98,18 @@ export default class Nip46ScopedDaemon {
           npub: session.npub,
         },
         select: {
-          nsec: true,
+          ncryptsec: true,
         },
       });
 
-      if (!userKey || !userKey.nsec) {
+      if (!userKey || !userKey.ncryptsec) {
         console.log(`No private key found for user ${session.npub}`);
         return null;
       }
 
       // Decode the nsec to get the private key bytes
-      const decoded = nip19.decode(userKey.nsec);
-      return decoded.data as Uint8Array;
+      const decoded = hexToBytes(userKey.ncryptsec);
+      return decoded as Uint8Array;
     } catch (error) {
       console.error(
         `Error getting private key for user ${session.npub}:`,
@@ -260,7 +195,7 @@ export default class Nip46ScopedDaemon {
       const remoteNpub = nip19.npubEncode(params.pubkey);
       const session = await prisma.sessions.findFirst({
         where: {
-          npub: npub,
+          // npub: npub,
           sessionNpub: remoteNpub,
           scopeSlug: this.bunkerScope || null,
         },
@@ -268,7 +203,6 @@ export default class Nip46ScopedDaemon {
       if (session) {
         console.log(
           'Found existing session for ',
-          npub,
           params.pubkey,
           this.bunkerScope ? `in scope ${this.bunkerScope}` : ''
         );
@@ -276,7 +210,6 @@ export default class Nip46ScopedDaemon {
       } else {
         console.log(
           'No session found for ',
-          npub,
           remoteNpub,
           this.bunkerScope ? `in scope ${this.bunkerScope}` : ''
         );
@@ -301,6 +234,10 @@ export default class Nip46ScopedDaemon {
         console.log('Subscription ended');
       },
     });
+  }
+
+  async stop(): Promise<void> {
+    this.sub?.close();
   }
 
   protected async handleIncomingEvent(event: NostrEvent): Promise<void> {
@@ -367,14 +304,16 @@ export default class Nip46ScopedDaemon {
         return;
       }
 
-      // Try regular handlers first
-      const handlerMethod = (
-        this.constructor as typeof Nip46ScopedDaemon
-      )._handlers.get(nip46RPCCallParams.method);
-      if (handlerMethod) {
+      // Try session handlers
+      const sessionHandlerMethod = this.sessionHandlers.get(method);
+      if (sessionHandlerMethod) {
         try {
-          if (typeof handlerMethod === 'function') {
-            response = await handlerMethod.call(this, nip46RPCCallParams);
+          if (typeof sessionHandlerMethod === 'function') {
+            response = await sessionHandlerMethod.call(
+              this,
+              nip46RPCCallParams,
+              session
+            );
           }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
@@ -387,32 +326,8 @@ export default class Nip46ScopedDaemon {
           );
         }
       } else {
-        // Try session handlers
-        const sessionHandlerMethod = (
-          this.constructor as typeof Nip46ScopedDaemon
-        )._sessionHandlers.get(method);
-        if (sessionHandlerMethod) {
-          try {
-            if (typeof sessionHandlerMethod === 'function') {
-              response = await sessionHandlerMethod.call(
-                this,
-                nip46RPCCallParams,
-                session
-              );
-            }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (e: any) {
-            this.encryptedAdapter.sendResponse(
-              id,
-              remotePubkey,
-              'error',
-              undefined,
-              e.message
-            );
-          }
-        } else {
-          console.log('unsupported method', { method, params });
-        }
+        console.log('unsupported method', { method, params });
+        console.log('supported session handlers', this.sessionHandlers);
       }
 
       if (response) {
@@ -446,7 +361,6 @@ export default class Nip46ScopedDaemon {
     }
   }
 
-  @handler('connect')
   private async handleConnect(
     nip46RPCCallParams: Nip46RPCCallParams
   ): Promise<string> {
@@ -457,7 +371,6 @@ export default class Nip46ScopedDaemon {
     return 'ack';
   }
 
-  @session_handler('get_public_key')
   private async handleGetPublicKey(
     nip46RPCCallParams: Nip46RPCCallParams,
     session: SessionInfo
@@ -465,7 +378,6 @@ export default class Nip46ScopedDaemon {
     return nip19.decode(session.npub).data as string;
   }
 
-  @session_handler('nip04_decrypt')
   private async handleNip04Decrypt(
     nip46RPCCallParams: Nip46RPCCallParams,
     session: SessionInfo
@@ -489,7 +401,6 @@ export default class Nip46ScopedDaemon {
     return decryptedPayload;
   }
 
-  @session_handler('nip44_decrypt')
   private async handleNip44Decrypt(
     nip46RPCCallParams: Nip46RPCCallParams,
     session: SessionInfo
@@ -513,7 +424,6 @@ export default class Nip46ScopedDaemon {
     return decryptedPayload;
   }
 
-  @session_handler('nip44_encrypt')
   private async handleNip44Encrypt(
     nip46RPCCallParams: Nip46RPCCallParams,
     session: SessionInfo
@@ -537,7 +447,6 @@ export default class Nip46ScopedDaemon {
     return encryptedPayload;
   }
 
-  @session_handler('nip04_encrypt')
   private async handleNip04Encrypt(
     nip46RPCCallParams: Nip46RPCCallParams,
     session: SessionInfo
@@ -561,7 +470,6 @@ export default class Nip46ScopedDaemon {
     return encryptedPayload;
   }
 
-  @session_handler('ping')
   private async handlePing(
     nip46RPCCallParams: Nip46RPCCallParams,
     session: SessionInfo
@@ -571,7 +479,6 @@ export default class Nip46ScopedDaemon {
     return 'pong';
   }
 
-  @session_handler('sign_event')
   private async handleSignEvent(
     nip46RPCCallParams: Nip46RPCCallParams,
     session: SessionInfo
@@ -593,11 +500,12 @@ export default class Nip46ScopedDaemon {
     const event = new NDKEvent(undefined, JSON.parse(eventString));
 
     console.log('event to sign', event.rawEvent());
-
-    console.log(`sign event request from ${nip46RPCCallParams.pubkey} allowed`);
-
-    // TODO: Implement proper signing with the daemon's private key
-    // await event.sign(this.signer);
+    const key = await this.getUserPrivateKey(session);
+    if (!key) {
+      console.error(`Failed to get private key for user ${session.npub}`);
+      return undefined;
+    }
+    await event.sign(new NDKPrivateKeySigner(key));
     return event;
   }
 }
