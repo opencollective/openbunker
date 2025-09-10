@@ -5,38 +5,34 @@ import { useState } from 'react';
 interface CreateKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { name: string; email: string }) => Promise<void>;
+  onSubmit: (data: { scope: string }) => Promise<void>;
+  scope?: string; // Optional scope parameter
 }
 
 export default function CreateKeyModal({
   isOpen,
   onClose,
   onSubmit,
+  scope: initialScope,
 }: CreateKeyModalProps) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [scope, setScope] = useState(initialScope || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim()) {
-      setError('Please fill in all fields');
+    if (!scope.trim()) {
+      setError('Please enter a scope');
       return;
     }
 
-    // Validate name format (alphanumeric and dots only)
-    const nameRegex = /^[a-zA-Z0-9.]+$/;
-    if (!nameRegex.test(name)) {
-      setError('Name can only contain letters, numbers, and dots');
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address');
+    // Validate scope format (alphanumeric, hyphens, and underscores only)
+    const scopeRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!scopeRegex.test(scope)) {
+      setError(
+        'Scope can only contain letters, numbers, hyphens, and underscores'
+      );
       return;
     }
 
@@ -44,10 +40,9 @@ export default function CreateKeyModal({
     setError('');
 
     try {
-      await onSubmit({ name: name.trim(), email: email.trim() });
+      await onSubmit({ scope: scope.trim() });
       // Reset form on success
-      setName('');
-      setEmail('');
+      setScope(initialScope || '');
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create key');
@@ -58,8 +53,7 @@ export default function CreateKeyModal({
 
   const handleClose = () => {
     if (!loading) {
-      setName('');
-      setEmail('');
+      setScope(initialScope || '');
       setError('');
       onClose();
     }
@@ -72,7 +66,7 @@ export default function CreateKeyModal({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
-            Create New Nostr Key
+            Create New Scope Key
           </h2>
           <button
             onClick={handleClose}
@@ -99,45 +93,25 @@ export default function CreateKeyModal({
           <div className="space-y-4">
             <div>
               <label
-                htmlFor="name"
+                htmlFor="scope"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                NIP-05 Name
+                Scope
               </label>
               <input
                 type="text"
-                id="name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="yourname"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                disabled={loading}
+                id="scope"
+                value={scope}
+                onChange={e => setScope(e.target.value)}
+                placeholder="my-scope"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
+                disabled={loading || !!initialScope}
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                This will be your NIP-05 identifier (e.g., yourname@domain.com)
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="your.email@example.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                disabled={loading}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Used for account recovery and notifications
+                {initialScope
+                  ? `This key will be created for scope: ${initialScope}`
+                  : 'Enter the scope for this key (e.g., my-scope)'}
               </p>
             </div>
 

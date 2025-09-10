@@ -25,7 +25,7 @@ export default function OpenBunkerLogin({
     setError('');
 
     try {
-      const authUrl = await authenticateWithOpenBunker();
+      const authUrl = await authenticateWithOpenBunker(isInPopup);
       console.log('authUrl', authUrl);
     } catch {
       setError('Failed to start OpenBunker authentication. Please try again.');

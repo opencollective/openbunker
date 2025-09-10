@@ -10,7 +10,7 @@ interface AuthContextType {
   currentSession: Session | null;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  authenticateWithOpenBunker: () => Promise<string>;
+  authenticateWithOpenBunker: (isInPopup: boolean) => Promise<string>;
   checkOpenBunkerCallback: (secretKey: string) => Promise<void>;
   sendMagicLink: (email: string) => Promise<void>;
   handleOtp: (email: string, token: string) => Promise<void>;
@@ -107,12 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!supabase) {
         throw new Error('Supabase client not available');
       }
-      const baseUrl =
-        process.env.NEXT_PUBLIC_DEPLOY_URL || window.location.origin;
       const { error, data } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: `${baseUrl}`,
+          redirectTo: `${window.location.href}`,
         },
       });
 

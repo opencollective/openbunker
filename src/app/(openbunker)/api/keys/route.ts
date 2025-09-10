@@ -65,19 +65,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name } = body;
+    const { scope } = body;
+
+    if (!scope) {
+      return NextResponse.json({ error: 'Scope is required' }, { status: 400 });
+    }
 
     // Generate a new Nostr key pair
     const secretKey = generateSecretKey();
     const publicKey = getPublicKey(secretKey);
     const npub = nip19.npubEncode(publicKey);
 
+    // Create name using scope + email
+    const keyName = `${scope}-${user.email}`;
+
     // Create the key in the Keys table
     const key = await prisma.keys.create({
       data: {
         npub: npub,
-        name: name || 'My Key',
+        name: keyName,
         email: user.email || '',
+        scopeSlug: scope,
         relays: [],
         enckey: '',
         profile: undefined,
@@ -92,7 +100,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         npub: npub,
-        name: name || 'My Key',
+        name: keyName,
         isActive: true,
       },
     });

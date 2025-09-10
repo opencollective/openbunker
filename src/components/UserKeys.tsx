@@ -30,7 +30,7 @@ export default function UserKeys() {
     router.push(`/key/${npub}`);
   };
 
-  const handleCreateKey = async (data: { name: string; email: string }) => {
+  const handleCreateKey = async (data: { scope: string }) => {
     try {
       const response = await fetch('/api/keys', {
         method: 'POST',
@@ -38,8 +38,7 @@ export default function UserKeys() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: data.name,
-          email: data.email,
+          scope: data.scope,
         }),
       });
 

@@ -86,6 +86,7 @@ export default function KeySelector({
         <CreateKeyModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
+          scope={scopeSlug || undefined}
           onSubmit={async data => {
             try {
               const response = await fetch('/api/keys', {
