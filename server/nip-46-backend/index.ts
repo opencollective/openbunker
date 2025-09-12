@@ -172,9 +172,6 @@ export default class Nip46ScopedDaemon {
     // Check if we have a valid token for this connection
     if (params.method === 'connect') {
       const remoteNpub = nip19.npubEncode(params.pubkey);
-      // the signer-side pubkey
-      // const signerPubkey = params.params[0];
-      // const signerNpub = nip19.npubEncode(signerPubkey);
       const token = params.params[1];
 
       // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
@@ -322,7 +319,7 @@ export default class Nip46ScopedDaemon {
         handler(event);
       },
       oneose() {
-        console.log('Subscription ended');
+        console.log('Subscription ready');
       },
     });
   }
@@ -377,6 +374,19 @@ export default class Nip46ScopedDaemon {
       if (method === 'connect') {
         response = await this.handleConnect(nip46RPCCallParams);
         console.log('connect request from ', remotePubkey, ' allowed');
+        if (response === 'error') {
+          // This is enough to support the authUrl flow
+          const authUrl = `${process.env.NEXT_PUBLIC_OPENBUNKER_URL}/openbunker-login-popup?scope=${this.bunkerScope}`;
+          // send error
+          this.encryptedAdapter.sendResponse(
+            id,
+            remotePubkey,
+            'auth_url',
+            undefined,
+            authUrl
+          );
+          return;
+        }
         await this.encryptedAdapter.sendResponse(id, remotePubkey, response);
         return;
       }
@@ -386,13 +396,15 @@ export default class Nip46ScopedDaemon {
       const session = await this.validateAndGetUserSession(nip46RPCCallParams);
       console.log('session', session);
       if (session == null) {
+        // This is enough to support the authUrl flow
+        const authUrl = `${process.env.NEXT_PUBLIC_OPENBUNKER_URL}/openbunker-login-popup?scope=${this.bunkerScope}`;
         // send error
         this.encryptedAdapter.sendResponse(
           id,
           remotePubkey,
           'error',
           undefined,
-          'Not authorized'
+          authUrl
         );
         return;
       }
@@ -459,6 +471,9 @@ export default class Nip46ScopedDaemon {
   ): Promise<string> {
     const [signerPubkey, token] = nip46RPCCallParams.params; //[<remote-signer-pubkey>, <optional_secret>, <optional_requested_permissions>]
     const session = await this.validateAndGetUserSession(nip46RPCCallParams);
+    if (!session) {
+      return 'error';
+    }
     return 'ack';
   }
 
