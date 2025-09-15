@@ -43,7 +43,6 @@ export class NDKEncryptedNostrChannelAdapter extends EventEmitter {
       new Set(relayUrls.map(url => new NDKRelay(url, undefined, this.ndk))),
       this.ndk
     );
-    console.log('Relay set', this.relaySet);
   }
 
   public async parseEvent(
