@@ -9,15 +9,16 @@
     "lint": "next lint",
     "bunker-client": "tsx server/bunker-client.ts",
     "multi-bunker": "dotenv -e .env.local -- tsx server/multi-bunker-server.ts",
+    "email-notifications": "dotenv -e .env.local -- tsx server/email-notification-server.ts",
     "db:generate": "dotenv -e .env.local -- prisma generate",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "dev:all": "concurrently \"npm run multi-bunker\" \"npm run dev\"",
+    "dev:with-email": "concurrently \"npm run multi-bunker\" \"npm run email-notifications\" \"npm run dev\"",
     "format": "prettier --write .",
     "prepare": "husky"
   },
   "dependencies": {
-    "@nostr-dev-kit/ndk": "^2.14.32",
     "@prisma/client": "^6.10.1",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
@@ -29,6 +30,7 @@
     "nostr-tools": "^2.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "resend": "^3.2.0",
     "ws": "^8.13.0"
   },
   "devDependencies": {
