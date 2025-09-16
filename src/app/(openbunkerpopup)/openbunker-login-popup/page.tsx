@@ -3,6 +3,10 @@
 import KeySelector from '@/components/KeySelector';
 import OpenBunkerLogin from '@/components/OpenBunkerLogin';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  ParsedNostrConnectURI,
+  parseNostrConnectURI,
+} from '@/utils/nip46Utils';
 import { Keys } from '@prisma/client';
 import { useSearchParams } from 'next/navigation';
 import { nip19 } from 'nostr-tools';
@@ -14,14 +18,64 @@ function OpenBunkerLoginPopupContent() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenSuccess, setTokenSuccess] = useState<string | null>(null);
   const [scopeSlug, setScopeSlug] = useState<string | null>(null);
+  const [connectionMode, setConnectionMode] = useState<
+    'bunker' | 'nostrconnect'
+  >('bunker');
+  const [connectionToken, setConnectionToken] = useState<string | null>(null);
+  const [parsedConnectionToken, setParsedConnectionToken] =
+    useState<ParsedNostrConnectURI | null>(null);
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
-  // Parse scope parameter from URL
+  // Parse scope, connectionMode, and connectionToken parameters from URL
   useEffect(() => {
     const scope = searchParams.get('scope');
+    const mode = searchParams.get('connectionMode');
+    const token = searchParams.get('connectionToken');
+
     if (scope) {
       setScopeSlug(scope);
+    }
+
+    if (mode === 'nostrconnect') {
+      if (!token) {
+        console.warn(
+          'NostrConnect mode requested but no connectionToken provided, falling back to bunker mode'
+        );
+        setConnectionMode('bunker');
+        return;
+      }
+      console.log('Token:', token);
+      // Validate the connection token format
+      if (!isValidNostrConnectToken(token)) {
+        console.warn(
+          'Invalid NostrConnect token format, falling back to bunker mode'
+        );
+        setConnectionMode('bunker');
+        return;
+      }
+
+      // Parse the token to get the connection details
+      try {
+        const parsed = parseNostrConnectURI(token);
+        setParsedConnectionToken(parsed);
+        console.log(
+          'Valid NostrConnect token provided, using nostrconnect mode',
+          parsed
+        );
+      } catch (parseError) {
+        console.warn(
+          'Failed to parse NostrConnect token, falling back to bunker mode',
+          parseError
+        );
+        setConnectionMode('bunker');
+        return;
+      }
+
+      setConnectionToken(token);
+      setConnectionMode('nostrconnect');
+    } else {
+      setConnectionMode('bunker'); // default
     }
   }, [searchParams]);
 
@@ -38,6 +92,22 @@ function OpenBunkerLoginPopupContent() {
     }
   };
 
+  const isValidNostrConnectToken = (token: string): boolean => {
+    try {
+      // Check if it's a valid nostrconnect URI format
+      // Expected format: nostrconnect://<base64-encoded-json>
+      if (!token.startsWith('nostrconnect://')) {
+        return false;
+      }
+
+      parseNostrConnectURI(token);
+      return true;
+    } catch {
+      // If parsing fails, it's not a valid token
+      return false;
+    }
+  };
+
   const handleKeySelected = async (key: Keys) => {
     // Prevent multiple simultaneous token creation attempts
     if (isCreatingToken) {
@@ -45,7 +115,7 @@ function OpenBunkerLoginPopupContent() {
       return;
     }
 
-    console.log('Key selected:', key);
+    console.log('Key selected:', key, 'Connection mode:', connectionMode);
     setSelectedKey(key);
     setIsCreatingToken(true);
     setTokenError(null);
@@ -69,138 +139,16 @@ function OpenBunkerLoginPopupContent() {
       // Check if the key has valid tokens (optional - could be useful for user feedback)
       console.log('Key access verified');
 
-      // Get the scope slug from the user metadata
-      // This assumes the session is already set and we can access user metadata
-      const scopeSlug = key?.scopeSlug;
-
-      let scopeNpub: string;
-      console.log('Scope slug:', scopeSlug);
-
-      if (scopeSlug) {
-        // Fetch the scope to get its npub
-        const scopeResponse = await fetch(`/api/scopes/${scopeSlug}`);
-        if (!scopeResponse.ok) {
-          throw new Error('Failed to fetch scope information');
-        }
-
-        const scopeData = await scopeResponse.json();
-        const scope = scopeData.scope;
-        if (!scope || !scope.key || !scope.key.npub) {
-          throw new Error('Invalid scope: missing npub');
-        }
-
-        scopeNpub = scope.key.npub;
-        console.log('Using scope npub for bunker URL:', scopeNpub);
-      } else {
-        // Use BUNKER_NPUB environment variable as fallback
-        const bunkerNpub = process.env.NEXT_PUBLIC_BUNKER_NPUB;
-        if (!bunkerNpub) {
-          throw new Error(
-            'No scope associated with this session and BUNKER_NPUB not configured'
-          );
-        }
-        scopeNpub = bunkerNpub;
-        console.log('Using BUNKER_NPUB for bunker URL:', scopeNpub);
-      }
-
       // Use the user's key for connection token creation
       const userNpub = key.npub;
       console.log('Using user key for connection token:', userNpub);
 
-      // Call the API to create a connection token using the user's key
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-      try {
-        const response = await fetch(
-          `/api/keys/${userNpub}/connection-tokens`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-            signal: controller.signal,
-          }
-        );
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          let errorMessage = 'Failed to create connection token';
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch {
-            // If we can't parse the error response, use the status text
-            errorMessage = response.statusText || errorMessage;
-          }
-
-          if (response.status === 401) {
-            errorMessage = 'Authentication required. Please sign in again.';
-          } else if (response.status === 403) {
-            errorMessage =
-              "Access denied. You don't have permission to use this key.";
-          } else if (response.status === 404) {
-            errorMessage = 'Key not found or access denied.';
-          }
-
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        console.log('Token creation response:', data);
-
-        const token = data.token?.token;
-
-        if (!token) {
-          throw new Error('Invalid response: missing token data');
-        }
-
-        console.log('Connection token created successfully:', token);
-
-        // Decode the scope's npub to get the hex
-        let scopeHex: string;
-        try {
-          scopeHex = nip19.decode(scopeNpub).data as unknown as string;
-          console.log('Decoded scope hex:', scopeHex);
-        } catch (decodeError) {
-          throw new Error(
-            'Invalid scope npub: could not decode: ' + String(decodeError)
-          );
-        }
-
-        // Get the relay URL with fallback
-        const relayUrl =
-          process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app';
-        console.log('Using relay URL:', relayUrl);
-
-        // Create the bunker URL using the scope's npub
-        const bunkerUrl = `bunker://${scopeHex}?relay=${encodeURIComponent(relayUrl)}&secret=${token}`;
-
-        // Validate the bunker URL
-        if (!validateBunkerUrl(bunkerUrl)) {
-          throw new Error('Invalid bunker URL format');
-        }
-
-        console.log('Bunker URL created and validated:', bunkerUrl);
-
-        // Now we have both session and key, proceed with authentication
-        setTokenSuccess(
-          'Connection token created successfully! Redirecting...'
-        );
-
-        // Show success message briefly before proceeding
-        setTimeout(() => {
-          console.log('Proceeding with popup callback');
-          handlePopupCallback(bunkerUrl);
-        }, 1000);
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error('Request timed out. Please try again.');
-        }
-        throw fetchError;
+      if (connectionMode === 'nostrconnect') {
+        // Handle nostrconnect mode
+        await handleNostrConnectMode(userNpub);
+      } else {
+        // Handle bunker mode (existing logic)
+        await handleBunkerMode(key, userNpub);
       }
     } catch (error) {
       console.error('Error creating connection token:', error);
@@ -216,6 +164,204 @@ function OpenBunkerLoginPopupContent() {
     }
   };
 
+  const handleBunkerMode = async (key: Keys, userNpub: string) => {
+    // Get the scope slug from the user metadata
+    // This assumes the session is already set and we can access user metadata
+    const scopeSlug = key?.scopeSlug;
+
+    let scopeNpub: string;
+    console.log('Scope slug:', scopeSlug);
+
+    if (scopeSlug) {
+      // Fetch the scope to get its npub
+      const scopeResponse = await fetch(`/api/scopes/${scopeSlug}`);
+      if (!scopeResponse.ok) {
+        throw new Error('Failed to fetch scope information');
+      }
+
+      const scopeData = await scopeResponse.json();
+      const scope = scopeData.scope;
+      if (!scope || !scope.key || !scope.key.npub) {
+        throw new Error('Invalid scope: missing npub');
+      }
+
+      scopeNpub = scope.key.npub;
+      console.log('Using scope npub for bunker URL:', scopeNpub);
+    } else {
+      // Use BUNKER_NPUB environment variable as fallback
+      const bunkerNpub = process.env.NEXT_PUBLIC_BUNKER_NPUB;
+      if (!bunkerNpub) {
+        throw new Error(
+          'No scope associated with this session and BUNKER_NPUB not configured'
+        );
+      }
+      scopeNpub = bunkerNpub;
+      console.log('Using BUNKER_NPUB for bunker URL:', scopeNpub);
+    }
+
+    // Call the API to create a connection token using the user's key
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    try {
+      const response = await fetch(`/api/keys/${userNpub}/connection-tokens`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to create connection token';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If we can't parse the error response, use the status text
+          errorMessage = response.statusText || errorMessage;
+        }
+
+        if (response.status === 401) {
+          errorMessage = 'Authentication required. Please sign in again.';
+        } else if (response.status === 403) {
+          errorMessage =
+            "Access denied. You don't have permission to use this key.";
+        } else if (response.status === 404) {
+          errorMessage = 'Key not found or access denied.';
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('Token creation response:', data);
+
+      const token = data.token?.token;
+
+      if (!token) {
+        throw new Error('Invalid response: missing token data');
+      }
+
+      console.log('Connection token created successfully:', token);
+
+      // Decode the scope's npub to get the hex
+      let scopeHex: string;
+      try {
+        scopeHex = nip19.decode(scopeNpub).data as unknown as string;
+        console.log('Decoded scope hex:', scopeHex);
+      } catch (decodeError) {
+        throw new Error(
+          'Invalid scope npub: could not decode: ' + String(decodeError)
+        );
+      }
+
+      // Get the relay URL with fallback
+      const relayUrl =
+        process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app';
+      console.log('Using relay URL:', relayUrl);
+
+      // Create the bunker URL using the scope's npub
+      const bunkerUrl = `bunker://${scopeHex}?relay=${encodeURIComponent(relayUrl)}&secret=${token}`;
+
+      // Validate the bunker URL
+      if (!validateBunkerUrl(bunkerUrl)) {
+        throw new Error('Invalid bunker URL format');
+      }
+
+      console.log('Bunker URL created and validated:', bunkerUrl);
+
+      // Now we have both session and key, proceed with authentication
+      setTokenSuccess('Connection token created successfully! Redirecting...');
+
+      // Show success message briefly before proceeding
+      setTimeout(() => {
+        console.log('Proceeding with popup callback');
+        handlePopupCallback(bunkerUrl);
+      }, 1000);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      throw fetchError;
+    }
+  };
+
+  const handleNostrConnectMode = async (userNpub: string) => {
+    // Validate that we have a connection token and parsed data
+    if (!connectionToken || !parsedConnectionToken) {
+      throw new Error(
+        'No connection token or parsed data provided for NostrConnect mode'
+      );
+    }
+
+    // Call the API to create a nostrconnect response
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    try {
+      const response = await fetch(`/api/keys/${userNpub}/nostrconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          connectionToken: connectionToken,
+          scope: scopeSlug,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to create nostrconnect response';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If we can't parse the error response, use the status text
+          errorMessage = response.statusText || errorMessage;
+        }
+
+        if (response.status === 401) {
+          errorMessage = 'Authentication required. Please sign in again.';
+        } else if (response.status === 403) {
+          errorMessage =
+            "Access denied. You don't have permission to use this key.";
+        } else if (response.status === 404) {
+          errorMessage = 'Key not found or access denied.';
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('NostrConnect response:', data);
+
+      // Show success message briefly before proceeding
+      setTokenSuccess(
+        'NostrConnect response created successfully! Redirecting...'
+      );
+
+      // Show success message briefly before proceeding
+      setTimeout(() => {
+        console.log('Proceeding with nostrconnect popup callback');
+        handleNostrConnectCallback();
+      }, 1000);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      throw fetchError;
+    }
+  };
+
   const handlePopupCallback = (bunkerConnectionToken: string) => {
     // Check if we're in a popup window
     if (window.opener && !window.opener.closed) {
@@ -225,6 +371,7 @@ function OpenBunkerLoginPopupContent() {
         window.opener.postMessage(
           {
             type: 'openbunker-auth-success',
+            connectionMode: 'bunker',
             secretKey: bunkerConnectionToken,
           },
           '*' // Allow any origin for cross-origin communication
@@ -242,6 +389,36 @@ function OpenBunkerLoginPopupContent() {
       console.log('Not in a popup - redirect to login page');
       // Not in a popup - redirect to login page
       const loginUrl = `${window.location.origin}/login?secret_key=${encodeURIComponent(bunkerConnectionToken)}`;
+      window.location.href = loginUrl;
+    }
+  };
+
+  const handleNostrConnectCallback = () => {
+    // Check if we're in a popup window
+    if (window.opener && !window.opener.closed) {
+      // We're in a popup - communicate with parent via postMessage
+      try {
+        // Use postMessage as the primary communication method to avoid cross-origin issues
+        window.opener.postMessage(
+          {
+            type: 'openbunker-auth-success',
+            connectionMode: 'nostrconnect',
+          },
+          '*' // Allow any origin for cross-origin communication
+        );
+
+        // Close the popup
+        window.close();
+      } catch (err) {
+        console.error('Failed to communicate with parent window:', err);
+        // Fallback to redirect with connect response data
+        const loginUrl = `${window.location.origin}/login?nostrconnect_response=${encodeURIComponent(JSON.stringify(connectResponse))}`;
+        window.location.href = loginUrl;
+      }
+    } else {
+      console.log('Not in a popup - redirect to login page');
+      // Not in a popup - redirect to login page
+      const loginUrl = `${window.location.origin}/login?nostrconnect_response=${encodeURIComponent(JSON.stringify(connectResponse))}`;
       window.location.href = loginUrl;
     }
   };
@@ -266,7 +443,8 @@ function OpenBunkerLoginPopupContent() {
             {/* Footer */}
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
-                Please authenticate to access your Nostr identities
+                Please authenticate to access your Nostr identities for{' '}
+                {connectionMode === 'bunker' ? 'bunker' : 'NostrConnect'} mode
               </p>
             </div>
           </div>
@@ -284,6 +462,27 @@ function OpenBunkerLoginPopupContent() {
               OpenBunker
             </h1>
             <p className="text-gray-600">Choose your Nostr identity</p>
+            <div className="mt-2">
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  connectionMode === 'bunker'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-purple-100 text-purple-800'
+                }`}
+              >
+                {connectionMode === 'bunker'
+                  ? 'Bunker Mode'
+                  : 'NostrConnect Mode'}
+              </span>
+              {searchParams.get('connectionMode') === 'nostrconnect' &&
+                connectionMode === 'bunker' && (
+                  <div className="mt-1">
+                    <span className="text-xs text-amber-600">
+                      Invalid NostrConnect token, using Bunker mode
+                    </span>
+                  </div>
+                )}
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-6">
@@ -331,7 +530,11 @@ function OpenBunkerLoginPopupContent() {
               {isCreatingToken && (
                 <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-                  <span>Creating connection token...</span>
+                  <span>
+                    {connectionMode === 'bunker'
+                      ? 'Creating connection token...'
+                      : 'Creating NostrConnect response...'}
+                  </span>
                 </div>
               )}
               {tokenError && (
@@ -393,7 +596,9 @@ function OpenBunkerLoginPopupContent() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
-              Choose a Nostr identity to complete authentication
+              Choose a Nostr identity to complete{' '}
+              {connectionMode === 'bunker' ? 'bunker' : 'NostrConnect'}{' '}
+              authentication
             </p>
           </div>
         </div>
