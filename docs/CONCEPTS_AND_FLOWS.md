@@ -61,7 +61,7 @@ sequenceDiagram
     Note over OBD: Session stored with client-pubkey & remote-signer-pubkey
 ```
 
-### Unauthenticated connection flow
+### Unauthenticated connection flow (deprecated)
 
 the user asks for a bunker token based on their email address for this scope. Same as Authenticated except that the flow is not authenticated but still succeeds based on email / scope
 
