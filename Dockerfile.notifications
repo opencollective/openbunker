@@ -1,6 +1,0 @@
-# Use the existing Dockerfile.server as base
-FROM openbunker-server:latest AS base
-
-# Override the command to run a different service
-# You can change this to any command you need
-CMD ["sh", "-c", "npx prisma generate && npm run email-notifications"]

@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.server
+      target: runner
     container_name: openbunker-server
     restart: unless-stopped
     environment:
@@ -22,7 +23,8 @@ services:
   notification-server:
     build:
       context: .
-      dockerfile: Dockerfile.notifications
+      dockerfile: Dockerfile.server
+      target: notifications
     container_name: openbunker-notifications
     restart: unless-stopped
     environment:

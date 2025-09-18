@@ -40,3 +40,7 @@ EXPOSE 3001
 
 # Start the multi-bunker server
 CMD ["sh", "-c", "npx prisma generate && npm run multi-bunker"]
+
+FROM runner as notifications
+
+CMD ["sh", "-c", "npx prisma generate && npm run email-notifications"]
