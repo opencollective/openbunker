@@ -2,8 +2,8 @@
 import WebSocket from 'ws';
 (global as any).WebSocket = WebSocket;
 
-import { PrismaClient } from '@prisma/client';
-import { SimplePool, type Event, type Filter } from 'nostr-tools';
+import { Keys, PrismaClient } from '@prisma/client';
+import { nip19, SimplePool, type Event, type Filter } from 'nostr-tools';
 import { CreateEmailOptions, Resend } from 'resend';
 import { getCommunityATagFromEnv } from '../src/utils/communityUtils';
 
@@ -18,11 +18,11 @@ const relays = ['wss://relay.damus.io'];
 
 // Email configuration
 const NOTIFICATION_EMAILS = process.env.NOTIFICATION_EMAILS?.split(',') || [];
-const COMMUNITY_IDENTIFIER = process.env.COMMUNITY_IDENTIFIER || '';
+const NOSTR_COMMUNITY_IDENTIFIER = process.env.NOSTR_COMMUNITY_IDENTIFIER || '';
 
 console.log('Starting Email Notification Server...');
 console.log(`Connecting to relays: ${relays.join(', ')}`);
-console.log(`Community identifier: ${COMMUNITY_IDENTIFIER}`);
+console.log(`Community identifier: ${NOSTR_COMMUNITY_IDENTIFIER}`);
 console.log(`Notification emails: ${NOTIFICATION_EMAILS.join(', ')}`);
 
 class EmailNotificationServer {
@@ -74,15 +74,16 @@ class EmailNotificationServer {
     const newRequestFilter: Filter = {
       kinds: [1111],
       '#a': [getCommunityATagFromEnv()], // Community tag
-      since: Math.floor(Date.now() / 1000) - 10 * 60,
+      since: Math.floor(Date.now() / 1000),
     };
 
+    console.log('New request filter:', newRequestFilter);
     // Filter 2: Kind 1111 with A tag referencing community and p tag (replies)
     const replyFilter: Filter = {
       kinds: [1111],
       '#A': [getCommunityATagFromEnv()], // Community tag
-      '#p': [], // Any p tag
-      since: Math.floor(Date.now() / 1000) - 10 * 60,
+      // '#p': [], // Any p tag
+      since: Math.floor(Date.now() / 1000),
     };
 
     // Subscribe to new request events
@@ -142,11 +143,11 @@ class EmailNotificationServer {
         if (!pubkey) continue;
 
         const keyExists = await this.checkKeyExists(pubkey);
-        if (keyExists) {
+        if (keyExists && keyExists.email) {
           console.log(
             `Key ${pubkey} found in database, sending reply notification`
           );
-          await this.sendReplyNotification(event, pubkey);
+          await this.sendReplyNotification(event, keyExists.email);
         } else {
           console.log(
             `Key ${pubkey} not found in database, skipping notification`
@@ -158,17 +159,18 @@ class EmailNotificationServer {
     }
   }
 
-  private async checkKeyExists(pubkey: string): Promise<boolean> {
+  private async checkKeyExists(pubkey: string): Promise<Keys | null> {
     try {
+      const npub = nip19.npubEncode(pubkey);
       const key = await prisma.keys.findUnique({
         where: {
-          npub: pubkey,
+          npub: npub,
         },
       });
-      return !!key;
+      return key;
     } catch (error) {
       console.error('Error checking key existence:', error);
-      return false;
+      return null;
     }
   }
 
@@ -189,11 +191,11 @@ class EmailNotificationServer {
       const emailOptions: CreateEmailOptions = {
         from: 'onboarding@resend.dev',
         to: NOTIFICATION_EMAILS,
-        subject: `New Community Request - ${COMMUNITY_IDENTIFIER}`,
+        subject: `New Community Request - ${NOSTR_COMMUNITY_IDENTIFIER}`,
         html: `
           <p><strong>View Request:</strong> <a href="https://requests.opencollective.xyz/requests/${eventId}">https://requests.opencollective.xyz/request/${eventId}</a></p>
           <h2>New Community Request</h2>
-          <p><strong>Community:</strong> ${COMMUNITY_IDENTIFIER}</p>
+          <p><strong>Community:</strong> ${NOSTR_COMMUNITY_IDENTIFIER}</p>
           <p><strong>Event ID:</strong> ${eventId}</p>
           <p><strong>Author:</strong> ${pubkey}</p>
           <p><strong>Created:</strong> ${createdAt.toISOString()}</p>
@@ -212,22 +214,8 @@ class EmailNotificationServer {
     }
   }
 
-  private async sendReplyNotification(event: Event, targetPubkey: string) {
+  private async sendReplyNotification(event: Event, targetEmail: string) {
     try {
-      // Get the key information from database
-      const key = await prisma.keys.findUnique({
-        where: {
-          npub: targetPubkey,
-        },
-      });
-
-      if (!key || !key.email) {
-        console.log(
-          `No email found for key ${targetPubkey}, skipping reply notification`
-        );
-        return;
-      }
-
       const eventContent = event.content || 'No content';
       const eventId = event.id;
       const authorPubkey = event.pubkey;
@@ -235,11 +223,11 @@ class EmailNotificationServer {
 
       const emailOptions: CreateEmailOptions = {
         from: 'onboarding@resend.dev',
-        to: [key.email],
-        subject: `New Reply to Your Community Request - ${COMMUNITY_IDENTIFIER}`,
+        to: [targetEmail],
+        subject: `New Reply to Your Community Request - ${NOSTR_COMMUNITY_IDENTIFIER}`,
         html: `
           <h2>New Reply to Your Community Request</h2>
-          <p><strong>Community:</strong> ${COMMUNITY_IDENTIFIER}</p>
+          <p><strong>Community:</strong> ${NOSTR_COMMUNITY_IDENTIFIER}</p>
           <p><strong>Event ID:</strong> ${eventId}</p>
           <p><strong>Replied by:</strong> ${authorPubkey}</p>
           <p><strong>Created:</strong> ${createdAt.toISOString()}</p>
@@ -252,7 +240,7 @@ class EmailNotificationServer {
       };
 
       const result = await resend.emails.send(emailOptions);
-      console.log(`Reply notification sent to ${key.email}:`, result);
+      console.log(`Reply notification sent to ${targetEmail}:`, result);
     } catch (error) {
       console.error('Error sending reply notification:', error);
     }

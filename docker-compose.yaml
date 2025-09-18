@@ -18,6 +18,27 @@ services:
       timeout: 10s
       retries: 3
 
+  # Email Notification Server
+  notification-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.notifications
+    container_name: openbunker-notifications
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NOSTR_RELAYS=wss://relay.nsec.app
+      # Add other environment variables as needed
+    env_file:
+      - .env.local
+    depends_on:
+      - bunker-server
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Next.js Frontend
   # frontend:
   #   build:
