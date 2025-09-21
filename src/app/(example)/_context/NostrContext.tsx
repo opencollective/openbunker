@@ -50,6 +50,10 @@ export interface NostrContextType {
   // Nostr connect flow
   configureBunkerConnectionWithNostrConnect: () => Promise<void>;
   configureBunkerConnectionWithBunkerToken: () => Promise<void>;
+  configureBunkerConnectionWithRedirect: (redirectUrl: string) => Promise<void>;
+  configureBunkerConnectionWithNostrConnectRedirect: (
+    redirectUrl: string
+  ) => Promise<void>;
 
   // Callbacks
   logout: () => Promise<void>;

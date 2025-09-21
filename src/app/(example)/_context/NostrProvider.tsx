@@ -1,5 +1,6 @@
 'use client';
 
+import type { OpenBunkerAuthMessage } from '@/types/openbunkerApiTypes';
 import {
   finalizeEvent,
   generateSecretKey,
@@ -11,6 +12,7 @@ import {
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   openBunkerApi,
+  parseAuthMessageFromUrl,
   type OpenBunkerAuthSuccessEvent,
 } from '../_api/openbunker';
 import { useBunkerAuthState } from '../_hooks/useBunkerAuthState';
@@ -126,6 +128,79 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     [eventQueue]
   );
 
+  // Handle URL-based authentication messages
+  const handleUrlAuthMessage = useCallback(
+    async (authMessage: OpenBunkerAuthMessage) => {
+      try {
+        console.log('Processing URL auth message:', authMessage);
+
+        if (authMessage.connectionMode === 'bunker') {
+          const sk = generateSecretKey();
+          await bunkerAuth.handleBunkerConnectionToken(
+            authMessage.secretKey,
+            sk
+          );
+          console.log('Bunker connection established via URL');
+        } else if (authMessage.connectionMode === 'nostrconnect') {
+          if (authMessage.success) {
+            console.log('NostrConnect authentication successful via URL');
+
+            // Check if we have stored data from a redirect flow
+            const storedSecretKey = sessionStorage.getItem(
+              'nostrconnect-local-secret-key'
+            );
+            const storedConnectionUri = sessionStorage.getItem(
+              'nostrconnect-connection-uri'
+            );
+
+            if (storedSecretKey && storedConnectionUri) {
+              try {
+                // Parse the stored secret key
+                const localSecretKey = new Uint8Array(
+                  JSON.parse(storedSecretKey)
+                );
+
+                // Create bunker signer from the stored connection URI
+                const bunkerSigner = await bunkerSignerfromURI(
+                  localSecretKey,
+                  storedConnectionUri
+                );
+
+                // Connect with the bunker signer
+                await bunkerAuth.connected(bunkerSigner, localSecretKey);
+
+                // Clean up stored data
+                sessionStorage.removeItem('nostrconnect-local-secret-key');
+                sessionStorage.removeItem('nostrconnect-connection-uri');
+
+                console.log(
+                  'NostrConnect redirect flow completed successfully'
+                );
+              } catch (err) {
+                console.error(
+                  'Failed to complete NostrConnect redirect flow:',
+                  err
+                );
+              }
+            } else {
+              console.log(
+                'NostrConnect success but no stored data found (likely popup flow)'
+              );
+            }
+          } else {
+            console.error(
+              'NostrConnect authentication failed:',
+              authMessage.errorMessage
+            );
+          }
+        }
+      } catch (err) {
+        console.error('Failed to process URL auth message:', err);
+      }
+    },
+    [bunkerAuth.handleBunkerConnectionToken, bunkerAuth.connected]
+  );
+
   // Process queue when authentication becomes available
   React.useEffect(() => {
     if (isConfigured && eventQueue.queue.length > 0) {
@@ -143,6 +218,18 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     secretKeyAuth.localSecretKey,
     bunkerAuth.bunkerSigner,
   ]);
+
+  // Check for URL-based authentication on mount
+  React.useEffect(() => {
+    const authMessage = parseAuthMessageFromUrl();
+    if (authMessage) {
+      handleUrlAuthMessage(authMessage);
+      // Clean up URL parameters after processing
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [handleUrlAuthMessage]);
 
   const handleOpenBunkerSuccess = useCallback(
     async (openBunkerEvent: MessageEvent<OpenBunkerAuthSuccessEvent>) => {
@@ -171,6 +258,40 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       ) => Promise<void>
     );
   }, [setPopup, handleOpenBunkerSuccess]);
+
+  // New function for redirect-based authentication
+  const configureBunkerConnectionWithRedirect = useCallback(
+    async (redirectUrl: string) => {
+      await openBunkerApi.redirectWithBunkerToken(redirectUrl);
+    },
+    []
+  );
+
+  // New function for NostrConnect redirect-based authentication
+  const configureBunkerConnectionWithNostrConnectRedirect = useCallback(
+    async (redirectUrl: string) => {
+      const localSecretKey = generateSecretKey();
+      const secret = Math.random().toString(36).substring(2, 15);
+
+      const connectionUri = createNostrConnectURI({
+        clientPubkey: getPublicKey(localSecretKey),
+        relays: ['wss://relay.nsec.app'],
+        secret: secret,
+        name: 'OpenBunker Example',
+      });
+
+      // Store the local secret key for when we return from redirect
+      // We'll need to handle this in the URL auth message handler
+      sessionStorage.setItem(
+        'nostrconnect-local-secret-key',
+        JSON.stringify(Array.from(localSecretKey))
+      );
+      sessionStorage.setItem('nostrconnect-connection-uri', connectionUri);
+
+      await openBunkerApi.redirectWithNostrConnect(connectionUri, redirectUrl);
+    },
+    []
+  );
 
   /**
    * This will init the flow from scratch using nostrconnect
@@ -268,6 +389,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     popup,
     configureBunkerConnectionWithNostrConnect,
     configureBunkerConnectionWithBunkerToken,
+    configureBunkerConnectionWithRedirect,
+    configureBunkerConnectionWithNostrConnectRedirect,
     // Callbacks
     logout,
     sendVerifiedEvent,
