@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useNostr } from '@/app/(example)/_context/NostrContext';
+import { useNostr } from '@/app/(example)/_context/NostrProvider';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function SecretKeyLogin() {
   const [secretKey, setSecretKey] = useState('');

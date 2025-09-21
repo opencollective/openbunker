@@ -1,25 +1,37 @@
 'use client';
 
-import { useNostr } from '@/app/(example)/_context/NostrContext';
-import UserProfile from '@/app/(example)/_components/NostrUserProfile';
-import UserProfileEvent from '@/app/(example)/_components/UserProfileEvent';
 import BunkerStatus from '@/app/(example)/_components/BunkerStatus';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import UserProfile from '@/app/(example)/_components/NostrUserProfile';
+// import UserProfileEvent from '@/app/(example)/_components/UserProfileEvent';
+import { useNostr } from '@/app/(example)/_context/NostrProvider';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function Home() {
-  const { isConnected: nostrConnected } = useNostr();
+  const { nostrStatus, logout } = useNostr();
   const router = useRouter();
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!nostrConnected) {
+    console.log('Example page: nostrStatus changed to:', nostrStatus);
+    if (nostrStatus !== 'connected') {
+      console.log('Example page: Redirecting to login');
       router.push('/example/login');
     }
-  }, [nostrConnected, router]);
+  }, [nostrStatus, router]);
 
-  if (!nostrConnected) {
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/example/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  if (nostrStatus !== 'connected') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
         <div className="text-center">
@@ -32,6 +44,38 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-purple-100">
+      {/* Header with logout button */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                OpenBunker Example
+              </h2>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
@@ -92,7 +136,7 @@ export default function Home() {
                   View and edit your Nostr profile (kind 0 event)
                 </p>
               </div>
-              <UserProfileEvent />
+              {/* <UserProfileEvent /> */}
             </div>
           </div>
         </div>
