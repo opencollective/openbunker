@@ -11,6 +11,36 @@ export type ParsedNostrConnectURI = {
   };
   originalString: string;
 };
+
+export const validateBunkerUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return (
+      urlObj.protocol === 'bunker:' &&
+      urlObj.searchParams.has('relay') &&
+      urlObj.searchParams.has('secret')
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const isValidNostrConnectToken = (token: string): boolean => {
+  try {
+    // Check if it's a valid nostrconnect URI format
+    // Expected format: nostrconnect://<base64-encoded-json>
+    if (!token.startsWith('nostrconnect://')) {
+      return false;
+    }
+
+    parseNostrConnectURI(token);
+    return true;
+  } catch {
+    // If parsing fails, it's not a valid token
+    return false;
+  }
+};
+
 export function parseNostrConnectURI(uri: string): ParsedNostrConnectURI {
   if (!uri.startsWith('nostrconnect://')) {
     throw new Error(
