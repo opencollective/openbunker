@@ -1,10 +1,14 @@
 'use client';
 
-import { useNostr } from '@/app/(example)/_context/NostrContext';
+import { useNostr } from '@/app/(example)/_context/NostrProvider';
 
 export default function BunkerStatus() {
-  const { bunkerStatus, bunkerError, bunkerConnectionToken, bunkerSigner } =
-    useNostr();
+  const {
+    bunkerStatus,
+    bunkerError,
+    bunkerConnectionConfiguration,
+    bunkerSigner,
+  } = useNostr();
 
   const getStatusColor = () => {
     switch (bunkerStatus) {
@@ -136,14 +140,14 @@ export default function BunkerStatus() {
         </div>
 
         {/* Connection Token */}
-        {bunkerConnectionToken && (
+        {bunkerConnectionConfiguration && (
           <div className="p-3 bg-blue-50 rounded-lg">
             <p className="text-xs font-medium text-blue-900 mb-1">
               Connection Token
             </p>
             <p className="text-xs text-blue-700 font-mono break-all">
-              {bunkerConnectionToken.slice(0, 20)}...
-              {bunkerConnectionToken.slice(-20)}
+              {bunkerConnectionConfiguration.connectionToken.slice(0, 20)}...
+              {bunkerConnectionConfiguration.connectionToken.slice(-20)}
             </p>
           </div>
         )}

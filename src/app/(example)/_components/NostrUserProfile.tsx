@@ -1,12 +1,11 @@
 'use client';
 
+import { getPublicKey, nip19 } from 'nostr-tools';
 import { useState } from 'react';
-import { useNostr } from '../_context/NostrContext';
-import { getPublicKey } from 'nostr-tools';
-import { nip19 } from 'nostr-tools';
+import { useNostr } from '../_context/NostrProvider';
 
 export default function UserProfile() {
-  const { localSecretKey, bunkerConnectionToken } = useNostr();
+  const { localSecretKey, bunkerConnectionConfiguration, logout } = useNostr();
   const [showTooltip, setShowTooltip] = useState(false);
 
   if (!localSecretKey) return null;
@@ -37,13 +36,13 @@ export default function UserProfile() {
           {localSecretKey}
         </p>
       </div>
-      {bunkerConnectionToken && (
+      {bunkerConnectionConfiguration && (
         <div>
           <h4 className="font-semibold text-gray-900 mb-1">
             Bunker Connection Token
           </h4>
           <p className="text-sm font-mono text-gray-700 break-all">
-            {bunkerConnectionToken}
+            {bunkerConnectionConfiguration.connectionToken}
           </p>
         </div>
       )}
@@ -67,10 +66,10 @@ export default function UserProfile() {
             {npub.slice(0, 8)}...{npub.slice(-8)}
           </h3>
           <p className="text-gray-600">Nostr Public Key</p>
-          {bunkerConnectionToken && (
+          {bunkerConnectionConfiguration && (
             <p className="text-sm text-indigo-600 font-mono">
-              {bunkerConnectionToken.slice(0, 8)}...
-              {bunkerConnectionToken.slice(-8)}
+              {bunkerConnectionConfiguration.connectionToken.slice(0, 8)}...
+              {bunkerConnectionConfiguration.connectionToken.slice(-8)}
             </p>
           )}
         </div>
@@ -85,11 +84,13 @@ export default function UserProfile() {
       )}
 
       <button
-        onClick={() => {
-          // Handle sign out
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('openbunker_session');
-            window.location.href = '/example';
+        onClick={async () => {
+          try {
+            await logout();
+            // The logout function will handle clearing all state
+            // The main page will redirect to login when nostrStatus changes
+          } catch (error) {
+            console.error('Logout failed:', error);
           }
         }}
         className="w-full mt-6 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"

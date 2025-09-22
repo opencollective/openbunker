@@ -1,68 +1,50 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { OpenBunkerAuthButton } from '@/app/(example)/_components/OpenBunkerAuthButton';
 import SecretKeyLogin from '@/app/(example)/_components/SecretKeyLogin';
-import { useNostr } from '@/app/(example)/_context/NostrContext';
-import { generateSecretKey } from 'nostr-tools';
+import { useNostr } from '@/app/(example)/_context/NostrProvider';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function LoginOptions() {
   const [showSecretKey, setShowSecretKey] = useState(false);
-  const [popup, setPopup] = useState<Window | null>(null);
-  const { handleBunkerConnectionToken } = useNostr();
+  const {
+    configureBunkerConnectionWithBunkerToken,
+    configureBunkerConnectionWithNostrConnect,
+    configureBunkerConnectionWithRedirect,
+    configureBunkerConnectionWithNostrConnectRedirect,
+    popup,
+    nostrStatus,
+  } = useNostr();
   const router = useRouter();
 
-  const handleOpenBunkerSuccess = useCallback(
-    async (bunkerConnectionToken: string) => {
-      try {
-        const sk = generateSecretKey();
-        handleBunkerConnectionToken(bunkerConnectionToken, sk);
-        router.push('/example');
-      } catch (err) {
-        console.error('Failed to complete OpenBunker authentication:', err);
-      }
-    },
-    [handleBunkerConnectionToken, router]
-  );
-
-  // Set up the callback function for the popup
+  // Redirect to main page when authentication is successful
   useEffect(() => {
-    // Set up message listener as fallback
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      console.log('handleMessage', event.data);
-      if (event.data.type === 'openbunker-auth-success') {
-        handleOpenBunkerSuccess(event.data.secretKey);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [handleOpenBunkerSuccess]);
+    console.log('LoginOptions: nostrStatus changed to:', nostrStatus);
+    if (nostrStatus === 'connected') {
+      console.log('LoginOptions: Redirecting to /example');
+      router.push('/example');
+    }
+  }, [nostrStatus, router]);
 
   const handleOpenBunkerPopup = () => {
-    console.log('handleOpenBunkerPopup');
-    // Create a popup with the OpenBunkerLogin component
-    const popupWindow = window.open(
-      '/openbunker-login-popup',
-      'openbunker-login',
-      'width=500,height=600,scrollbars=yes,resizable=yes'
-    );
+    configureBunkerConnectionWithBunkerToken();
+  };
 
-    if (popupWindow) {
-      setPopup(popupWindow);
-      // Check if popup is closed
-      const checkClosed = setInterval(() => {
-        console.log('checkClosed', popupWindow.closed);
-        if (popupWindow.closed) {
-          clearInterval(checkClosed);
-          setPopup(null);
-        }
-      }, 1000);
-    }
+  const handleNostrConnectPopup = () => {
+    configureBunkerConnectionWithNostrConnect();
+  };
+
+  const handleOpenBunkerRedirect = () => {
+    // Get current URL as redirect URL
+    const redirectUrl = window.location.origin + '/example';
+    configureBunkerConnectionWithRedirect(redirectUrl);
+  };
+
+  const handleNostrConnectRedirect = () => {
+    // Get current URL as redirect URL
+    const redirectUrl = window.location.origin + '/example';
+    configureBunkerConnectionWithNostrConnectRedirect(redirectUrl);
   };
 
   if (showSecretKey) {
@@ -111,10 +93,23 @@ export default function LoginOptions() {
           <span>Authenticate with Secret Key</span>
         </button>
 
-        <button
+        <OpenBunkerAuthButton
           onClick={handleOpenBunkerPopup}
+          text="Authenticate with OpenBunker (Bunker Token)"
           disabled={!!popup}
-          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-3"
+          isLoading={!!popup}
+        />
+
+        <OpenBunkerAuthButton
+          onClick={handleNostrConnectPopup}
+          text="Authenticate with OpenBunker (NostrConnect)"
+          disabled={!!popup}
+          isLoading={!!popup}
+        />
+
+        <button
+          onClick={handleOpenBunkerRedirect}
+          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-3"
         >
           <svg
             className="w-5 h-5"
@@ -126,14 +121,30 @@ export default function LoginOptions() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
             />
           </svg>
-          <span>
-            {popup
-              ? 'OpenBunker Login in Progress...'
-              : 'Authenticate with OpenBunker'}
-          </span>
+          <span>Authenticate with OpenBunker (Redirect)</span>
+        </button>
+
+        <button
+          onClick={handleNostrConnectRedirect}
+          className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-3"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+            />
+          </svg>
+          <span>Authenticate with NostrConnect (Redirect)</span>
         </button>
       </div>
 
@@ -151,7 +162,20 @@ export default function LoginOptions() {
           direct authentication
         </p>
         <p className="text-sm text-gray-500 mt-1">
-          <strong>OpenBunker:</strong> Use Discord OAuth to get a new Nostr key
+          <strong>OpenBunker (Bunker Token):</strong> Use Discord OAuth to get a
+          new Nostr key
+        </p>
+        <p className="text-sm text-gray-500 mt-1">
+          <strong>OpenBunker (NostrConnect):</strong> Use NostrConnect protocol
+          for authentication
+        </p>
+        <p className="text-sm text-gray-500 mt-1">
+          <strong>OpenBunker (Redirect):</strong> Redirect to OpenBunker for
+          authentication and return with token
+        </p>
+        <p className="text-sm text-gray-500 mt-1">
+          <strong>NostrConnect (Redirect):</strong> Generate NostrConnect token
+          and redirect to OpenBunker for authentication
         </p>
       </div>
     </div>

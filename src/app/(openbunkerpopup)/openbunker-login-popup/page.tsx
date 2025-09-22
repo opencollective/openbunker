@@ -3,9 +3,12 @@
 import KeySelector from '@/components/KeySelector';
 import OpenBunkerLogin from '@/components/OpenBunkerLogin';
 import { useAuth } from '@/contexts/AuthContext';
+import { OpenBunkerAuthMessage } from '@/types/openbunkerApiTypes';
 import {
+  isValidNostrConnectToken,
   ParsedNostrConnectURI,
   parseNostrConnectURI,
+  validateBunkerUrl,
 } from '@/utils/nip46Utils';
 import { Keys } from '@prisma/client';
 import { useSearchParams } from 'next/navigation';
@@ -24,28 +27,27 @@ function OpenBunkerLoginPopupContent() {
   const [connectionToken, setConnectionToken] = useState<string | null>(null);
   const [parsedConnectionToken, setParsedConnectionToken] =
     useState<ParsedNostrConnectURI | null>(null);
+  // Redirect URL, if not defined, we are in popup mode
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
   // Parse scope, connectionMode, and connectionToken parameters from URL
   useEffect(() => {
     const scope = searchParams.get('scope');
-    const mode = searchParams.get('connectionMode');
+    // const mode = searchParams.get('connectionMode');
     const token = searchParams.get('connectionToken');
+    const mode = token ? 'nostrconnect' : 'bunker';
+    const redirectUrl = searchParams.get('redirectUrl');
+
+    setRedirectUrl(redirectUrl);
 
     if (scope) {
       setScopeSlug(scope);
     }
 
-    if (mode === 'nostrconnect') {
-      if (!token) {
-        console.warn(
-          'NostrConnect mode requested but no connectionToken provided, falling back to bunker mode'
-        );
-        setConnectionMode('bunker');
-        return;
-      }
-      console.log('Token:', token);
+    // nostrconnect mode
+    if (token) {
       // Validate the connection token format
       if (!isValidNostrConnectToken(token)) {
         console.warn(
@@ -60,8 +62,7 @@ function OpenBunkerLoginPopupContent() {
         const parsed = parseNostrConnectURI(token);
         setParsedConnectionToken(parsed);
         console.log(
-          'Valid NostrConnect token provided, using nostrconnect mode',
-          parsed
+          'Valid NostrConnect token provided, using nostrconnect mode'
         );
       } catch (parseError) {
         console.warn(
@@ -74,39 +75,9 @@ function OpenBunkerLoginPopupContent() {
 
       setConnectionToken(token);
       setConnectionMode('nostrconnect');
-    } else {
-      setConnectionMode('bunker'); // default
     }
+    setConnectionMode(mode);
   }, [searchParams]);
-
-  const validateBunkerUrl = (url: string): boolean => {
-    try {
-      const urlObj = new URL(url);
-      return (
-        urlObj.protocol === 'bunker:' &&
-        urlObj.searchParams.has('relay') &&
-        urlObj.searchParams.has('secret')
-      );
-    } catch {
-      return false;
-    }
-  };
-
-  const isValidNostrConnectToken = (token: string): boolean => {
-    try {
-      // Check if it's a valid nostrconnect URI format
-      // Expected format: nostrconnect://<base64-encoded-json>
-      if (!token.startsWith('nostrconnect://')) {
-        return false;
-      }
-
-      parseNostrConnectURI(token);
-      return true;
-    } catch {
-      // If parsing fails, it's not a valid token
-      return false;
-    }
-  };
 
   const handleKeySelected = async (key: Keys) => {
     // Prevent multiple simultaneous token creation attempts
@@ -129,25 +100,20 @@ function OpenBunkerLoginPopupContent() {
         );
       }
 
-      console.log('User authenticated:', user.id);
-
       // Check if the key belongs to the current user
       if (key.email !== user.email) {
         throw new Error("You don't have access to this key");
       }
-
-      // Check if the key has valid tokens (optional - could be useful for user feedback)
-      console.log('Key access verified');
 
       // Use the user's key for connection token creation
       const userNpub = key.npub;
       console.log('Using user key for connection token:', userNpub);
 
       if (connectionMode === 'nostrconnect') {
-        // Handle nostrconnect mode
-        await handleNostrConnectMode(userNpub);
+        // Handle nostrconnect mode - it handles its own errors internally
+        await handleNostrConnectMode(key);
       } else {
-        // Handle bunker mode (existing logic)
+        // Handle bunker mode
         await handleBunkerMode(key, userNpub);
       }
     } catch (error) {
@@ -159,8 +125,11 @@ function OpenBunkerLoginPopupContent() {
       console.error('Setting error message:', errorMessage);
       setTokenError(errorMessage);
     } finally {
-      console.log('Token creation process completed');
-      setIsCreatingToken(false);
+      // Only reset loading state for bunker mode, nostrconnect handles its own
+      if (connectionMode !== 'nostrconnect') {
+        console.log('Token creation process completed');
+        setIsCreatingToken(false);
+      }
     }
   };
 
@@ -262,7 +231,6 @@ function OpenBunkerLoginPopupContent() {
       // Get the relay URL with fallback
       const relayUrl =
         process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app';
-      console.log('Using relay URL:', relayUrl);
 
       // Create the bunker URL using the scope's npub
       const bunkerUrl = `bunker://${scopeHex}?relay=${encodeURIComponent(relayUrl)}&secret=${token}`;
@@ -280,7 +248,11 @@ function OpenBunkerLoginPopupContent() {
       // Show success message briefly before proceeding
       setTimeout(() => {
         console.log('Proceeding with popup callback');
-        handlePopupCallback(bunkerUrl);
+        handlePopupCallback({
+          type: 'openbunker-auth-success',
+          connectionMode: 'bunker',
+          secretKey: bunkerUrl,
+        });
       }, 1000);
     } catch (fetchError) {
       clearTimeout(timeoutId);
@@ -291,7 +263,7 @@ function OpenBunkerLoginPopupContent() {
     }
   };
 
-  const handleNostrConnectMode = async (userNpub: string) => {
+  const handleNostrConnectMode = async (key: Keys) => {
     // Validate that we have a connection token and parsed data
     if (!connectionToken || !parsedConnectionToken) {
       throw new Error(
@@ -304,14 +276,14 @@ function OpenBunkerLoginPopupContent() {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      const response = await fetch(`/api/keys/${userNpub}/nostrconnect`, {
+      const response = await fetch(`/api/keys/${key.npub}/nostrconnect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           connectionToken: connectionToken,
-          scope: scopeSlug,
+          scope: key.scopeSlug,
         }),
         signal: controller.signal,
       });
@@ -337,7 +309,17 @@ function OpenBunkerLoginPopupContent() {
           errorMessage = 'Key not found or access denied.';
         }
 
-        throw new Error(errorMessage);
+        // Send error message via popup callback
+        setTimeout(() => {
+          console.log('Proceeding with nostrconnect popup callback (error)');
+          handlePopupCallback({
+            type: 'openbunker-auth-success',
+            connectionMode: 'nostrconnect',
+            success: false,
+            errorMessage: errorMessage,
+          });
+        }, 1000);
+        return;
       }
 
       const data = await response.json();
@@ -350,76 +332,87 @@ function OpenBunkerLoginPopupContent() {
 
       // Show success message briefly before proceeding
       setTimeout(() => {
-        console.log('Proceeding with nostrconnect popup callback');
-        handleNostrConnectCallback();
+        console.log('Proceeding with nostrconnect popup callback (success)');
+        handlePopupCallback({
+          type: 'openbunker-auth-success',
+          connectionMode: 'nostrconnect',
+          success: true,
+        });
       }, 1000);
     } catch (fetchError) {
       clearTimeout(timeoutId);
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        throw new Error('Request timed out. Please try again.');
+      let errorMessage = 'Request timed out. Please try again.';
+
+      if (fetchError instanceof Error && fetchError.name !== 'AbortError') {
+        errorMessage = fetchError.message;
       }
-      throw fetchError;
+
+      // Send error message via popup callback
+      setTimeout(() => {
+        console.log(
+          'Proceeding with nostrconnect popup callback (catch error)'
+        );
+        handlePopupCallback({
+          type: 'openbunker-auth-success',
+          connectionMode: 'nostrconnect',
+          success: false,
+          errorMessage: errorMessage,
+        });
+      }, 1000);
     }
   };
 
-  const handlePopupCallback = (bunkerConnectionToken: string) => {
+  const handlePopupCallback = (message: OpenBunkerAuthMessage) => {
+    // Check if we're in redirect mode
+    if (redirectUrl) {
+      console.log('Redirect mode - redirecting to:', redirectUrl);
+
+      // Convert message parameters to URL parameters
+      const urlParams = new URLSearchParams();
+
+      // Add common parameters
+      urlParams.set('type', message.type);
+      urlParams.set('connectionMode', message.connectionMode);
+
+      // Add specific parameters based on connection mode
+      if (message.connectionMode === 'bunker') {
+        urlParams.set('secretKey', message.secretKey);
+      } else if (message.connectionMode === 'nostrconnect') {
+        urlParams.set('success', message.success.toString());
+        if (message.errorMessage) {
+          urlParams.set('errorMessage', message.errorMessage);
+        }
+      }
+
+      // Construct the final redirect URL with parameters
+      const separator = redirectUrl.includes('?') ? '&' : '?';
+      const finalUrl = `${redirectUrl}${separator}${urlParams.toString()}`;
+
+      console.log('Final redirect URL:', finalUrl);
+
+      // Redirect to the specified URL with parameters
+      window.location.href = finalUrl;
+      return;
+    }
+
     // Check if we're in a popup window
     if (window.opener && !window.opener.closed) {
       // We're in a popup - communicate with parent via postMessage
       try {
         // Use postMessage as the primary communication method to avoid cross-origin issues
-        window.opener.postMessage(
-          {
-            type: 'openbunker-auth-success',
-            connectionMode: 'bunker',
-            secretKey: bunkerConnectionToken,
-          },
-          '*' // Allow any origin for cross-origin communication
-        );
+        window.opener.postMessage(message, '*'); // Allow any origin for cross-origin communication
 
         // Close the popup
         window.close();
       } catch (err) {
         console.error('Failed to communicate with parent window:', err);
-        // Fallback to redirect
-        const loginUrl = `${window.location.origin}/login?secret_key=${encodeURIComponent(bunkerConnectionToken)}`;
-        window.location.href = loginUrl;
+        // Fallback to redirect to login page
+        window.location.href = `${window.location.origin}/login`;
       }
     } else {
       console.log('Not in a popup - redirect to login page');
       // Not in a popup - redirect to login page
-      const loginUrl = `${window.location.origin}/login?secret_key=${encodeURIComponent(bunkerConnectionToken)}`;
-      window.location.href = loginUrl;
-    }
-  };
-
-  const handleNostrConnectCallback = () => {
-    // Check if we're in a popup window
-    if (window.opener && !window.opener.closed) {
-      // We're in a popup - communicate with parent via postMessage
-      try {
-        // Use postMessage as the primary communication method to avoid cross-origin issues
-        window.opener.postMessage(
-          {
-            type: 'openbunker-auth-success',
-            connectionMode: 'nostrconnect',
-          },
-          '*' // Allow any origin for cross-origin communication
-        );
-
-        // Close the popup
-        window.close();
-      } catch (err) {
-        console.error('Failed to communicate with parent window:', err);
-        // Fallback to redirect with connect response data
-        const loginUrl = `${window.location.origin}/login?nostrconnect_response=${encodeURIComponent(JSON.stringify(connectResponse))}`;
-        window.location.href = loginUrl;
-      }
-    } else {
-      console.log('Not in a popup - redirect to login page');
-      // Not in a popup - redirect to login page
-      const loginUrl = `${window.location.origin}/login?nostrconnect_response=${encodeURIComponent(JSON.stringify(connectResponse))}`;
-      window.location.href = loginUrl;
+      window.location.href = `${window.location.origin}/login`;
     }
   };
 
