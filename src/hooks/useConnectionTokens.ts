@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCallback, useEffect, useState } from 'react';
 
 interface ConnectionToken {
   token: string;
@@ -11,6 +11,7 @@ interface ConnectionToken {
   expiry: number;
   jsonData: Record<string, unknown> | null;
   isExpired: boolean;
+  scopeKeyNpub?: string | null;
 }
 
 interface UseConnectionTokensReturn {
