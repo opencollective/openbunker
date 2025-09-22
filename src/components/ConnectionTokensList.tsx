@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { useConnectionTokens } from '@/hooks/useConnectionTokens';
 import { nip19 } from 'nostr-tools';
+import { useState } from 'react';
 
 interface ConnectionTokensListProps {
   npub: string;
@@ -18,20 +18,21 @@ export default function ConnectionTokensList({
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const buildBunkerUrl = (secret: string) => {
-    const relays = process.env.NEXT_PUBLIC_BUNKER_RELAYS;
-
+    const relays =
+      process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app';
     const pubkey = nip19.decode(npub).data;
 
-    let url = `bunker://${pubkey}?secret=${secret}`;
+    const url = new URL(`bunker://${pubkey}`);
+    url.searchParams.set('secret', secret);
 
     if (relays) {
       const relayList = relays.split(',').map(r => r.trim());
       relayList.forEach(relay => {
-        url += `&relay=${encodeURIComponent(relay)}`;
+        url.searchParams.append('relay', relay);
       });
     }
 
-    return url;
+    return url.toString();
   };
 
   const copyToClipboard = async (text: string, tokenId: string) => {
