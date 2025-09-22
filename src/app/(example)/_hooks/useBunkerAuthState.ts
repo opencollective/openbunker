@@ -4,8 +4,8 @@ import {
   type BunkerPointer,
 } from 'nostr-tools/nip46';
 import { useCallback, useEffect, useState } from 'react';
+import { storage } from '../_hooks/bunkerStorage';
 import { BunkerSigner } from '../_utils/nip46Utils';
-import { storage } from './bunkerStorage';
 
 export type BunkerConnectionConfiguration = {
   connectionToken: string;
