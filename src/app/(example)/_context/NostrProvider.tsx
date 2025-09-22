@@ -325,7 +325,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   // Compute aggregated nostrStatus for display
   const nostrStatus = useMemo(() => {
     // If using bunker authentication, use bunker status
-    if (bunkerAuth.bunkerConnectionConfiguration) {
+    if (bunkerAuth.bunkerStatus !== 'disconnected') {
       return bunkerAuth.bunkerStatus;
     }
 
