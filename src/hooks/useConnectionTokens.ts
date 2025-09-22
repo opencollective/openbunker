@@ -78,9 +78,8 @@ export function useConnectionTokens(npub: string): UseConnectionTokensReturn {
 
       const data = await response.json();
 
-      // Add the new token to the list
-      setTokens(prev => [data.token, ...prev]);
-
+      // // Add the new token to the list
+      fetchTokens();
       return data.token;
     } catch (err) {
       setError(

@@ -4,7 +4,7 @@ import ConnectionTokensList from '@/components/ConnectionTokensList';
 import { useUserKeys } from '@/hooks/useUserKeys';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export default function KeyDetailPage() {
   const params = useParams();
@@ -28,13 +28,6 @@ export default function KeyDetailPage() {
     if (npub.length <= 20) return npub;
     return `${npub.substring(0, 10)}...${npub.substring(npub.length - 10)}`;
   };
-
-  // Debug logging
-  useEffect(() => {
-    console.log('loading', loading);
-    console.log('error', error);
-    console.log('userKey', userKey);
-  }, [loading, error, userKey]);
 
   if (loading) {
     return (
