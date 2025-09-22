@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
     const {
@@ -17,32 +17,32 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all scopes owned by this user
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const queryType = searchParams.get('queryType') || 'owner';
+
+    // Validate queryType parameter
+    if (queryType !== 'all' && queryType !== 'owner') {
+      return NextResponse.json(
+        { error: 'Invalid queryType. Must be "all" or "owner"' },
+        { status: 400 }
+      );
+    }
+
+    // Build where clause based on queryType
+    const whereClause = queryType === 'owner' ? { owner: user.id } : {}; // Empty object for 'all' - gets all scopes
+
+    // Get scopes based on queryType
     const scopes = await prisma.scopes.findMany({
-      where: {
-        owner: user.id,
-      },
-      include: {
-        key: true,
-      },
+      where: whereClause,
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    // Return scopes with their nsec from database
-    const scopesWithNsec = scopes.map(scope => ({
-      ...scope,
-      key: {
-        npub: scope.key.npub,
-        nsec: scope.key.nsec, // Use the stored nsec
-        name: scope.key.name,
-      },
-    }));
-
-    return NextResponse.json({ scopes: scopesWithNsec });
+    return NextResponse.json({ scopes: scopes });
   } catch (error) {
-    console.error('Error fetching user scopes:', error);
+    console.error('Error fetching scopes:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

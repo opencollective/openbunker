@@ -1,6 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+interface Scope {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  owner: string;
+  keyNpub: string;
+  createdAt: string;
+  updatedAt: string;
+  key: {
+    npub: string;
+    nsec: string;
+    name: string;
+  };
+}
 
 interface CreateKeyModalProps {
   isOpen: boolean;
@@ -16,23 +32,48 @@ export default function CreateKeyModal({
   scope: initialScope,
 }: CreateKeyModalProps) {
   const [scope, setScope] = useState(initialScope || '');
+  const [scopes, setScopes] = useState<Scope[]>([]);
   const [loading, setLoading] = useState(false);
+  const [scopesLoading, setScopesLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Fetch available scopes when modal opens
+  useEffect(() => {
+    if (isOpen && !initialScope) {
+      fetchScopes();
+    }
+  }, [isOpen, initialScope]);
+
+  const fetchScopes = async () => {
+    setScopesLoading(true);
+    try {
+      const response = await fetch('/api/scopes?queryType=all');
+      if (response.ok) {
+        const data = await response.json();
+        setScopes(data.scopes || []);
+      } else {
+        setError('Failed to load available scopes');
+      }
+    } catch (error) {
+      console.error('Error fetching scopes:', error);
+      setError('Failed to load available scopes');
+    } finally {
+      setScopesLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!scope.trim()) {
-      setError('Please enter a scope');
+      setError('Please select a scope');
       return;
     }
 
-    // Validate scope format (alphanumeric, hyphens, and underscores only)
-    const scopeRegex = /^[a-zA-Z0-9_-]+$/;
-    if (!scopeRegex.test(scope)) {
-      setError(
-        'Scope can only contain letters, numbers, hyphens, and underscores'
-      );
+    // Validate that the selected scope exists in the available scopes
+    const selectedScope = scopes.find(s => s.slug === scope);
+    if (!selectedScope) {
+      setError('Please select a valid scope');
       return;
     }
 
@@ -98,20 +139,44 @@ export default function CreateKeyModal({
               >
                 Scope
               </label>
-              <input
-                type="text"
-                id="scope"
-                value={scope}
-                onChange={e => setScope(e.target.value)}
-                placeholder="my-scope"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
-                disabled={loading || !!initialScope}
-                required
-              />
+              {initialScope ? (
+                // Show read-only input when scope is pre-selected
+                <input
+                  type="text"
+                  id="scope"
+                  value={initialScope}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 cursor-not-allowed"
+                  disabled
+                  readOnly
+                />
+              ) : (
+                // Show dropdown when no scope is pre-selected
+                <select
+                  id="scope"
+                  value={scope}
+                  onChange={e => setScope(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
+                  disabled={loading || scopesLoading}
+                  required
+                >
+                  <option value="">
+                    {scopesLoading ? 'Loading scopes...' : 'Select a scope'}
+                  </option>
+                  {scopes.map(scopeOption => (
+                    <option key={scopeOption.id} value={scopeOption.slug}>
+                      {scopeOption.name} ({scopeOption.slug})
+                    </option>
+                  ))}
+                </select>
+              )}
               <p className="text-xs text-gray-500 mt-1">
                 {initialScope
                   ? `This key will be created for scope: ${initialScope}`
-                  : 'Enter the scope for this key (e.g., my-scope)'}
+                  : scopesLoading
+                    ? 'Loading available scopes...'
+                    : scopes.length === 0
+                      ? 'No scopes available. Create a scope first.'
+                      : 'Select the scope for this key'}
               </p>
             </div>
 
@@ -133,7 +198,11 @@ export default function CreateKeyModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={
+                loading ||
+                scopesLoading ||
+                (!initialScope && scopes.length === 0)
+              }
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center"
             >
               {loading ? (

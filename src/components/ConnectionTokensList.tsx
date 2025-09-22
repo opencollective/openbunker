@@ -4,6 +4,17 @@ import { useConnectionTokens } from '@/hooks/useConnectionTokens';
 import { nip19 } from 'nostr-tools';
 import { useState } from 'react';
 
+interface ConnectionToken {
+  token: string;
+  npub: string;
+  subNpub?: string;
+  timestamp: number;
+  expiry: number;
+  jsonData: Record<string, unknown> | null;
+  isExpired: boolean;
+  scopeKeyNpub?: string | null;
+}
+
 interface ConnectionTokensListProps {
   npub: string;
 }
@@ -17,10 +28,13 @@ export default function ConnectionTokensList({
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const buildBunkerUrl = (secret: string) => {
+  const buildBunkerUrl = (secret: string, token: ConnectionToken) => {
     const relays =
       process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app';
-    const pubkey = nip19.decode(npub).data;
+
+    // Use the scope's key if available, otherwise use the token's npub
+    const keyToUse = token.scopeKeyNpub || token.npub;
+    const pubkey = nip19.decode(keyToUse).data;
 
     const url = new URL(`bunker://${pubkey}`);
     url.searchParams.set('secret', secret);
@@ -347,7 +361,10 @@ export default function ConnectionTokensList({
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() =>
-                    copyToClipboard(buildBunkerUrl(token.token), token.token)
+                    copyToClipboard(
+                      buildBunkerUrl(token.token, token),
+                      token.token
+                    )
                   }
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                   title="Copy bunker:// URL"
