@@ -191,18 +191,33 @@ class EmailNotificationServer {
       const emailOptions: CreateEmailOptions = {
         from: 'onboarding@resend.dev',
         to: NOTIFICATION_EMAILS,
-        subject: `New Community Request - ${NOSTR_COMMUNITY_IDENTIFIER}`,
+        subject: `📝 New Community Request - ${NOSTR_COMMUNITY_IDENTIFIER}`,
         html: `
-          <p><strong>View Request:</strong> <a href="https://requests.opencollective.xyz/requests/${eventId}">https://requests.opencollective.xyz/request/${eventId}</a></p>
-          <h2>New Community Request</h2>
-          <p><strong>Community:</strong> ${NOSTR_COMMUNITY_IDENTIFIER}</p>
-          <p><strong>Event ID:</strong> ${eventId}</p>
-          <p><strong>Author:</strong> ${pubkey}</p>
-          <p><strong>Created:</strong> ${createdAt.toISOString()}</p>
-          <hr>
-          <h3>Request Content:</h3>
-          <div style="white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 4px;">
-            ${eventContent}
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 12px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #d97706; margin: 0; font-size: 28px;">📝 New Request!</h1>
+              <p style="color: #92400e; font-size: 18px; margin: 10px 0 0 0;">A new community request has been submitted in community ${NOSTR_COMMUNITY_IDENTIFIER}!</p>
+            </div>
+            
+            <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+              <h2 style="color: #d97706; margin-top: 0; font-size: 22px;">💬 Request Details</h2>
+              <div style="background: #ffedd5; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 15px 0;">
+                <div style="white-space: pre-wrap; font-size: 16px; line-height: 1.5; color: #374151;">${eventContent}</div>
+              </div>
+              
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="https://requests.opencollective.xyz/requests/${eventId}" style="background: linear-gradient(135deg, #f97316 0%, #d97706 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  👀 View Full Request
+                </a>
+              </div>
+            </div>
+            
+            <div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 2px 0;"><strong>Community:</strong> ${NOSTR_COMMUNITY_IDENTIFIER}</p>
+              <p style="margin: 2px 0;"><strong>Event ID:</strong> ${eventId}</p>
+              <p style="margin: 2px 0;"><strong>Author:</strong> ${pubkey}</p>
+              <p style="margin: 2px 0;"><strong>Created:</strong> ${createdAt.toISOString()}</p>
+            </div>
           </div>
         `,
       };
@@ -221,20 +236,46 @@ class EmailNotificationServer {
       const authorPubkey = event.pubkey;
       const createdAt = new Date(event.created_at * 1000);
 
+      // Extract the request ID from the 'e' tags (first e tag with 'root' marker)
+      const eTags = event.tags.filter(tag => tag[0] === 'e');
+      const rootRequestId =
+        eTags.find(tag => tag[3] === 'root')?.[1] || eTags[0]?.[1];
+
+      // Build the URL to the original request
+      const requestUrl = rootRequestId
+        ? `https://requests.opencollective.xyz/requests/${rootRequestId}`
+        : 'https://requests.opencollective.xyz/';
+
       const emailOptions: CreateEmailOptions = {
         from: 'onboarding@resend.dev',
         to: [targetEmail],
-        subject: `New Reply to Your Community Request - ${NOSTR_COMMUNITY_IDENTIFIER}`,
+        subject: `🎉 New Reply to Your Community Request - ${NOSTR_COMMUNITY_IDENTIFIER}`,
         html: `
-          <h2>New Reply to Your Community Request</h2>
-          <p><strong>Community:</strong> ${NOSTR_COMMUNITY_IDENTIFIER}</p>
-          <p><strong>Event ID:</strong> ${eventId}</p>
-          <p><strong>Replied by:</strong> ${authorPubkey}</p>
-          <p><strong>Created:</strong> ${createdAt.toISOString()}</p>
-          <hr>
-          <h3>Reply Content:</h3>
-          <div style="white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 4px;">
-            ${eventContent}
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 12px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #d97706; margin: 0; font-size: 28px;">🎉 Great News!</h1>
+              <p style="color: #92400e; font-size: 18px; margin: 10px 0 0 0;">Someone replied to your community request!</p>
+            </div>
+            
+            <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+              <h2 style="color: #d97706; margin-top: 0; font-size: 22px;">💬 New Reply</h2>
+              <div style="background: #ffedd5; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 15px 0;">
+                <div style="white-space: pre-wrap; font-size: 16px; line-height: 1.5; color: #374151;">${eventContent}</div>
+              </div>
+              
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${requestUrl}" style="background: linear-gradient(135deg, #f97316 0%, #d97706 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  👀 View Full Conversation
+                </a>
+              </div>
+            </div>
+            
+            <div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 2px 0;"><strong>Community:</strong> ${NOSTR_COMMUNITY_IDENTIFIER}</p>
+              <p style="margin: 2px 0;"><strong>Event ID:</strong> ${eventId}</p>
+              <p style="margin: 2px 0;"><strong>Replied by:</strong> ${authorPubkey}</p>
+              <p style="margin: 2px 0;"><strong>Created:</strong> ${createdAt.toISOString()}</p>
+            </div>
           </div>
         `,
       };
