@@ -45,11 +45,57 @@ Deno.serve(async req => {
       email_action_type: email_data.email_action_type,
     });
 
+    // Determine if this is sign up or sign in based on email action type
+    const isSignUp = email_data.email_action_type === 'signup';
+    const actionText = isSignUp ? 'Sign up' : 'Sign in';
+    const welcomeMessage = isSignUp
+      ? 'Welcome to Openbunker! (You are creating an openbunker account.)'
+      : 'Welcome back to Openbunker!';
+
+    // Create magic link
+    const magicLink = `${email_data.site_url}${email_data.redirect_to}?token=${email_data.token}&type=${email_data.email_action_type}`;
+
     const { error } = await resend.emails.send({
-      from: 'welcome <onboarding@resend.dev>',
+      from: 'Openbunker <onboarding@resend.dev>',
       to: [user.email],
-      subject: 'Welcome to OpenBunker!',
-      text: `Confirm you signup with this code: ${email_data.token}`,
+      subject: `${actionText}: Welcome to Openbunker!`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #333; text-align: center;">Welcome to Openbunker!</h1>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="font-size: 16px; color: #555; margin: 0 0 15px 0;">
+              ${welcomeMessage}
+            </p>
+            
+            <p style="font-size: 14px; color: #666; margin: 0 0 20px 0;">
+              To confirm your account, use the following code:
+            </p>
+            
+            <div style="background-color: #fff; border: 2px solid #e9ecef; border-radius: 6px; padding: 15px; text-align: center; margin: 15px 0;">
+              <span style="font-size: 24px; font-weight: bold; color: #007bff; letter-spacing: 3px; font-family: monospace;">
+                ${email_data.token}
+              </span>
+            </div>
+            
+            <p style="font-size: 14px; color: #666; margin: 20px 0 10px 0;">
+              Or click on the Magic link below:
+            </p>
+            
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${magicLink}" 
+                 style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                Confirm Account
+              </a>
+            </div>
+          </div>
+          
+          <p style="font-size: 12px; color: #999; text-align: center; margin-top: 30px;">
+            If you didn't request this ${isSignUp ? 'account creation' : 'sign in'}, please ignore this email.
+          </p>
+        </div>
+      `,
+      text: `${welcomeMessage}\n\nTo confirm your account, use the following code: ${email_data.token}\n\nOr click on the Magic link below:\n${magicLink}\n\nIf you didn't request this ${isSignUp ? 'account creation' : 'sign in'}, please ignore this email.`,
     });
     if (error) {
       throw error;
