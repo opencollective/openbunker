@@ -34,5 +34,6 @@
   },
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "deno.enablePaths": ["supabase/functions/send-email"]
 }
