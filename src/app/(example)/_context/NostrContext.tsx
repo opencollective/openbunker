@@ -54,6 +54,8 @@ export interface NostrContextType {
   configureBunkerConnectionWithNostrConnectRedirect: (
     redirectUrl: string
   ) => Promise<void>;
+  confirmBunkerConnection: (secret: string) => Promise<void>;
+  setPendingBunkerTokenForEmail: (token: string) => void;
 
   // Callbacks
   logout: () => Promise<void>;

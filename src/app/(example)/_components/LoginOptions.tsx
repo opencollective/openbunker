@@ -1,5 +1,6 @@
 'use client';
 
+import EmailLogin from '@/app/(example)/_components/EmailLogin';
 import { OpenBunkerAuthButton } from '@/app/(example)/_components/OpenBunkerAuthButton';
 import SecretKeyLogin from '@/app/(example)/_components/SecretKeyLogin';
 import { useNostr } from '@/app/(example)/_context/NostrProvider';
@@ -8,6 +9,7 @@ import { useEffect, useState } from 'react';
 
 export default function LoginOptions() {
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
   const {
     configureBunkerConnectionWithBunkerToken,
     configureBunkerConnectionWithNostrConnect,
@@ -61,6 +63,20 @@ export default function LoginOptions() {
     );
   }
 
+  if (showEmailLogin) {
+    return (
+      <div>
+        <button
+          onClick={() => setShowEmailLogin(false)}
+          className="mb-4 text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center"
+        >
+          ← Back to options
+        </button>
+        <EmailLogin />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -73,6 +89,26 @@ export default function LoginOptions() {
       </div>
 
       <div className="space-y-4">
+        <button
+          onClick={() => setShowEmailLogin(true)}
+          className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 px-4 rounded-lg hover:from-orange-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-3"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
+          </svg>
+          <span>Authenticate with Email</span>
+        </button>
+
         <button
           onClick={() => setShowSecretKey(true)}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-3"
@@ -158,6 +194,10 @@ export default function LoginOptions() {
 
       <div className="text-center">
         <p className="text-sm text-gray-500">
+          <strong>Email:</strong> Use your email address to receive a
+          verification code and authenticate
+        </p>
+        <p className="text-sm text-gray-500 mt-1">
           <strong>Secret Key:</strong> Use your existing Nostr secret key for
           direct authentication
         </p>

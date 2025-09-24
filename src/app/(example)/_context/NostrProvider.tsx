@@ -41,6 +41,9 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   // Openbunker specific
   const [error] = useState<string | null>(null);
   const [popup, setPopup] = useState<Window | null>(null);
+  const [pendingBunkerToken, setPendingBunkerToken] = useState<string | null>(
+    null
+  );
 
   const hasSigningMethod = useMemo(
     () => !!secretKeyAuth.localSecretKey || !!bunkerAuth.bunkerSigner,
@@ -322,6 +325,41 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     await bunkerAuth.connected(bunkerSigner, localSecretKey);
   }, [bunkerAuth]);
 
+  // Confirm bunker connection with secret (for email verification)
+  const confirmBunkerConnection = useCallback(
+    async (secret: string): Promise<void> => {
+      if (!pendingBunkerToken) {
+        throw new Error('No bunker connection token available');
+      }
+
+      try {
+        // Build bunker connection URL with secret
+        const url = new URL(pendingBunkerToken);
+        url.searchParams.set('secret', secret);
+        const bunkerConnectionTokenWithSecret = url.toString();
+
+        // Generate a local secret key and handle the bunker connection
+        const localSecretKey = generateSecretKey();
+        await bunkerAuth.handleBunkerConnectionToken(
+          bunkerConnectionTokenWithSecret,
+          localSecretKey
+        );
+
+        // Clean up the stored token
+        setPendingBunkerToken(null);
+      } catch (bunkerError) {
+        console.error('Failed to connect to bunker:', bunkerError);
+        throw bunkerError;
+      }
+    },
+    [bunkerAuth, pendingBunkerToken]
+  );
+
+  // Set pending bunker token (for email verification flow)
+  const setPendingBunkerTokenForEmail = useCallback((token: string) => {
+    setPendingBunkerToken(token);
+  }, []);
+
   // Compute aggregated nostrStatus for display
   const nostrStatus = useMemo(() => {
     // If using bunker authentication, use bunker status
@@ -391,6 +429,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     configureBunkerConnectionWithBunkerToken,
     configureBunkerConnectionWithRedirect,
     configureBunkerConnectionWithNostrConnectRedirect,
+    confirmBunkerConnection,
+    setPendingBunkerTokenForEmail,
     // Callbacks
     logout,
     sendVerifiedEvent,
