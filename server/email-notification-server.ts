@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Nostr relay URLs
-const relays = ['wss://relay.damus.io'];
+const relays = ['wss://relay.damus.io', 'wss://chorus.community'];
 
 // Email configuration
 const NOTIFICATION_EMAILS = process.env.NOTIFICATION_EMAILS?.split(',') || [];
