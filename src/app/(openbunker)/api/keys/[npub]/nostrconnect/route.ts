@@ -7,6 +7,7 @@ import {
 import { hexToBytes } from '@noble/hashes/utils';
 import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
 import { NextRequest, NextResponse } from 'next/server';
+import { nip19 } from 'nostr-tools';
 import { NDKEncryptedNostrChannelAdapter } from 'server/nip-46-backend/nostr-rpc';
 
 export async function POST(
@@ -91,7 +92,8 @@ export async function POST(
       parsed.params.relays ?? []
     );
 
-    await getOrCreateSession(npub, scope, parsed);
+    const session = await getOrCreateSession(npub, scope, parsed);
+    console.log('Session created', session);
     const id = Math.random().toString(36).substring(7);
     const connectionTokenSecret = parsed.params.secret;
     // This sends a response (without a request)
@@ -106,6 +108,11 @@ export async function POST(
       user.email,
       'npub:',
       npub
+    );
+    console.log(
+      'Sending response to client',
+      parsed.clientPubkey,
+      connectionTokenSecret
     );
 
     return NextResponse.json({
@@ -125,10 +132,11 @@ async function getOrCreateSession(
   scope: string,
   parsed: ParsedNostrConnectURI
 ) {
+  const sessionNpub = nip19.npubEncode(parsed.clientPubkey);
   // First check if there is an existing session for the user npub (remoteSignerPubkey) / and local npub
   const pubkeySession = await prisma.sessions.findFirst({
     where: {
-      sessionNpub: parsed.clientPubkey,
+      sessionNpub: sessionNpub,
       scopeSlug: scope,
     },
   });
@@ -144,7 +152,7 @@ async function getOrCreateSession(
   const newSession = await prisma.sessions.create({
     data: {
       npub: npub,
-      sessionNpub: parsed.clientPubkey,
+      sessionNpub: sessionNpub,
       scopeSlug: scope,
       expiresAt: BigInt(Date.now() + 1000 * 60 * 60), // 1 hour
     },

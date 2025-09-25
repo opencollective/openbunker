@@ -282,10 +282,10 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         secret: secret,
         name: 'OpenBunker Example',
       });
-
+      //client_pubkey?relay=wss://relay.nsec.app&secret=secret&name=OpenBunker Example
       // Store the local secret key for when we return from redirect
       // We'll need to handle this in the URL auth message handler
-      sessionStorage.setItem(
+      nostrconnect: sessionStorage.setItem(
         'nostrconnect-local-secret-key',
         JSON.stringify(Array.from(localSecretKey))
       );
