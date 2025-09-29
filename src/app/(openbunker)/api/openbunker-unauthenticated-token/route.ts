@@ -55,7 +55,7 @@ async function sendVerificationEmail(
   scope: string
 ) {
   const { error } = await resend.emails.send({
-    from: 'Openbunker <onboarding@resend.dev>',
+    from: 'Openbunker <info@updates.qualiaworks.com>',
     to: [email],
     subject: 'Confirm your connection to Openbunker',
     html: `
@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
             email: email,
             scopeSlug: scope,
             enckey: enckeyHex,
+            ncryptsec: enckeyHex,
             relays: [],
           },
         });
