@@ -145,7 +145,6 @@ export default function UserKeys() {
         </div>
 
         <CreateKeyModal
-          isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreateKey}
         />

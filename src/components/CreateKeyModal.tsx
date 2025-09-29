@@ -19,14 +19,12 @@ interface Scope {
 }
 
 interface CreateKeyModalProps {
-  isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { scope: string }) => Promise<void>;
   scope?: string; // Optional scope parameter
 }
 
 export default function CreateKeyModal({
-  isOpen,
   onClose,
   onSubmit,
   scope: initialScope,
@@ -39,10 +37,12 @@ export default function CreateKeyModal({
 
   // Fetch available scopes when modal opens
   useEffect(() => {
-    if (isOpen && !initialScope) {
+    if (initialScope) {
+      setScope(initialScope);
+    } else {
       fetchScopes();
     }
-  }, [isOpen, initialScope]);
+  }, [initialScope]);
 
   const fetchScopes = async () => {
     setScopesLoading(true);
@@ -72,7 +72,9 @@ export default function CreateKeyModal({
 
     // Validate that the selected scope exists in the available scopes
     const selectedScope = scopes.find(s => s.slug === scope);
-    if (!selectedScope) {
+    console.log('selectedScope', selectedScope);
+    console.log('scopes', scopes);
+    if (!selectedScope && !initialScope) {
       setError('Please select a valid scope');
       return;
     }
@@ -83,7 +85,6 @@ export default function CreateKeyModal({
     try {
       await onSubmit({ scope: scope.trim() });
       // Reset form on success
-      setScope(initialScope || '');
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create key');
@@ -99,8 +100,6 @@ export default function CreateKeyModal({
       onClose();
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

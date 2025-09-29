@@ -84,7 +84,6 @@ export default function KeySelector({
           </button>
         </div>
         <CreateKeyModal
-          isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           scope={scopeSlug || undefined}
           onSubmit={async data => {
