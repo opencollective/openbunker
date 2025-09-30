@@ -241,7 +241,7 @@ class MultiBunkerServer {
   }
 
   private setupPeriodicScanning() {
-    // Scan for new scopes/tokens every 5 seconds
+    // Scan for new scopes/tokens every 5 minutes
     setInterval(
       async () => {
         console.log('Periodic database scan...');
@@ -254,6 +254,70 @@ class MultiBunkerServer {
       },
       5 * 60 * 1000
     );
+
+    // Set up daily refresh at 1am UTC
+    this.setupDailyRefresh();
+  }
+
+  private setupDailyRefresh() {
+    const scheduleNextRefresh = () => {
+      const now = new Date();
+      const next1am = new Date();
+
+      // Set to 1am UTC
+      next1am.setUTCHours(1, 0, 0, 0);
+
+      // If we've passed 1am today, schedule for tomorrow
+      if (now >= next1am) {
+        next1am.setUTCDate(next1am.getUTCDate() + 1);
+      }
+
+      const msUntilRefresh = next1am.getTime() - now.getTime();
+
+      console.log(
+        `Daily bunker refresh scheduled for ${next1am.toISOString()} (in ${Math.round(msUntilRefresh / 1000 / 60)} minutes)`
+      );
+
+      setTimeout(async () => {
+        await this.refreshAllBunkers();
+        // Schedule the next refresh
+        scheduleNextRefresh();
+      }, msUntilRefresh);
+    };
+
+    scheduleNextRefresh();
+  }
+
+  private async refreshAllBunkers() {
+    console.log('Starting daily bunker refresh at 1am UTC...');
+
+    try {
+      // Stop all existing bunker instances
+      for (const [npub, instance] of this.bunkerInstances) {
+        try {
+          console.log(`Stopping bunker for ${npub}`);
+          await instance.stop();
+        } catch (error) {
+          console.error(`Error stopping bunker for ${npub}:`, error);
+        }
+      }
+
+      // Clear all instances
+      this.bunkerInstances.clear();
+      console.log('All bunker instances stopped');
+
+      // Rescan database
+      await this.scanDatabase();
+
+      // Restart all bunkers
+      await this.startAllBunkers();
+
+      console.log(
+        `Daily bunker refresh complete. ${this.bunkerInstances.size} bunkers restarted`
+      );
+    } catch (error) {
+      console.error('Error during daily bunker refresh:', error);
+    }
   }
 
   private async updateBunkerInstances() {
@@ -295,7 +359,7 @@ class MultiBunkerServer {
     // Stop all bunker instances
     for (const [npub, instance] of this.bunkerInstances) {
       try {
-        // Note: NDKNip46Backend doesn't have a stop method in the current version
+        await instance.stop();
         console.log(`Stopped bunker for ${npub}`);
       } catch (error) {
         console.error(`Error stopping bunker for ${npub}:`, error);

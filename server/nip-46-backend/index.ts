@@ -53,7 +53,32 @@ type SessionHandlerMethod = (
   session: SessionInfo
 ) => Promise<string | undefined>;
 
-// Extended NDKNip46Backend with logging
+/**
+ * Extended NDKNip46Backend with automatic reconnection and exponential backoff
+ *
+ * Features:
+ * - Automatic reconnection on subscription close events
+ * - Exponential backoff with jitter to prevent thundering herd
+ * - Configurable reconnection parameters
+ * - Comprehensive logging for debugging
+ *
+ * Usage:
+ * ```typescript
+ * const daemon = new Nip46ScopedDaemon(
+ *   remoteSignerInfo,
+ *   scope,
+ *   relayUrls,
+ *   {
+ *     maxReconnectAttempts: 10,
+ *     baseReconnectDelay: 1000,
+ *     maxReconnectDelay: 30000
+ *   }
+ * );
+ *
+ * await daemon.start();
+ * // Daemon will automatically reconnect on subscription close
+ * ```
+ */
 export default class Nip46ScopedDaemon {
   // Static property to store handlers
   static _handlers: Map<string, HandlerMethod> = new Map();
@@ -71,10 +96,24 @@ export default class Nip46ScopedDaemon {
   // Allow Callback will not be a param at first
   // allowCallback: (params: any) => Promise<boolean>
   private sub?: SubCloser;
+
+  // Reconnection handling properties
+  private isConnected: boolean = false;
+  private isReconnecting: boolean = false;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 10;
+  private baseReconnectDelay: number = 1000; // 1 second
+  private maxReconnectDelay: number = 30000; // 30 seconds
+  private reconnectTimeoutId?: NodeJS.Timeout;
   constructor(
     remoteSignerInfo: NostrUserInfo,
     scope: string,
-    relayUrls?: WebSocket['url'][]
+    relayUrls?: WebSocket['url'][],
+    options?: {
+      maxReconnectAttempts?: number;
+      baseReconnectDelay?: number;
+      maxReconnectDelay?: number;
+    }
   ) {
     this.pool = new SimplePool();
     this.relayUrls = relayUrls ?? [];
@@ -84,6 +123,131 @@ export default class Nip46ScopedDaemon {
       relayUrls ?? []
     );
     this.bunkerScope = scope;
+
+    // Apply custom options if provided
+    if (options) {
+      if (options.maxReconnectAttempts !== undefined) {
+        this.maxReconnectAttempts = options.maxReconnectAttempts;
+      }
+      if (options.baseReconnectDelay !== undefined) {
+        this.baseReconnectDelay = options.baseReconnectDelay;
+      }
+      if (options.maxReconnectDelay !== undefined) {
+        this.maxReconnectDelay = options.maxReconnectDelay;
+      }
+    }
+  }
+
+  /**
+   * Calculate exponential backoff delay with jitter
+   */
+  private calculateReconnectDelay(): number {
+    const exponentialDelay =
+      this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts);
+    const jitter = Math.random() * 1000; // Add up to 1 second of jitter
+    return Math.min(exponentialDelay + jitter, this.maxReconnectDelay);
+  }
+
+  /**
+   * Handle connection failure and initiate reconnection
+   */
+  private handleConnectionFailure(): void {
+    if (this.isReconnecting) {
+      return; // Already reconnecting
+    }
+
+    this.isConnected = false;
+    this.isReconnecting = true;
+
+    console.log(
+      `[${this.remoteSignerInfo.npub}] Connection failed, attempting reconnection (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`
+    );
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error(
+        `[${this.remoteSignerInfo.npub}] Max reconnection attempts reached, giving up`
+      );
+      this.isReconnecting = false;
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = this.calculateReconnectDelay();
+
+    console.log(
+      `[${this.remoteSignerInfo.npub}] Reconnecting in ${Math.round(delay)}ms`
+    );
+
+    this.reconnectTimeoutId = setTimeout(() => {
+      this.attemptReconnection();
+    }, delay);
+  }
+
+  /**
+   * Attempt to reconnect to relays
+   */
+  private async attemptReconnection(): Promise<void> {
+    try {
+      console.log(`[${this.remoteSignerInfo.npub}] Attempting reconnection...`);
+
+      // Close existing subscription if any
+      if (this.sub) {
+        this.sub.close();
+        this.sub = undefined;
+      }
+
+      // Attempt to reconnect
+      await this.subscribeToRelays();
+
+      console.log(`[${this.remoteSignerInfo.npub}] Reconnection successful`);
+      this.isConnected = true;
+      this.isReconnecting = false;
+      this.reconnectAttempts = 0; // Reset on successful connection
+    } catch (error) {
+      console.error(
+        `[${this.remoteSignerInfo.npub}] Reconnection failed:`,
+        error
+      );
+      this.isReconnecting = false;
+      this.handleConnectionFailure();
+    }
+  }
+
+  /**
+   * Connect to relays and set up subscription
+   */
+  private async subscribeToRelays(): Promise<void> {
+    const filter = {
+      kinds: [24133],
+      '#p': [this.remoteSignerInfo.pubKey],
+      since: Math.floor(Date.now() / 1000),
+    };
+
+    const handler = (e: NostrEvent) => {
+      this.handleIncomingEvent(e);
+    };
+
+    // Store reference to this for use in callbacks
+    const self = this;
+
+    this.sub = this.pool.subscribe(this.relayUrls, filter, {
+      onevent(event) {
+        handler(event);
+      },
+      oneose() {
+        console.log(`[${self.remoteSignerInfo.npub}] Subscription ready`);
+      },
+      onclose(reasons) {
+        console.log(
+          `[${self.remoteSignerInfo.npub}] Subscription closed:`,
+          reasons
+        );
+        // Trigger reconnection on close
+        if (self.isConnected) {
+          self.handleConnectionFailure();
+        }
+      },
+    });
   }
 
   sessionHandlers: Map<string, SessionHandlerMethod> = new Map([
@@ -307,25 +471,60 @@ export default class Nip46ScopedDaemon {
   }
 
   async start(): Promise<void> {
-    // this.localUser = await this.signer.user();
-    const filter = {
-      kinds: [24133],
-      '#p': [this.remoteSignerInfo.pubKey],
-      since: Math.floor(Date.now() / 1000),
-    };
-    const handler = (e: NostrEvent) => this.handleIncomingEvent(e);
-    this.sub = this.pool.subscribe(this.relayUrls, filter, {
-      onevent(event) {
-        handler(event);
-      },
-      oneose() {
-        console.log('Subscription ready');
-      },
-    });
+    console.log(`[${this.remoteSignerInfo.npub}] Starting NIP-46 daemon...`);
+
+    try {
+      await this.subscribeToRelays();
+      this.isConnected = true;
+
+      console.log(
+        `[${this.remoteSignerInfo.npub}] NIP-46 daemon started successfully`
+      );
+    } catch (error) {
+      console.error(
+        `[${this.remoteSignerInfo.npub}] Failed to start daemon:`,
+        error
+      );
+      this.handleConnectionFailure();
+    }
   }
 
   async stop(): Promise<void> {
-    this.sub?.close();
+    console.log(`[${this.remoteSignerInfo.npub}] Stopping NIP-46 daemon...`);
+
+    // Clear reconnection timeout if active
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = undefined;
+    }
+
+    // Close subscription
+    if (this.sub) {
+      this.sub.close();
+      this.sub = undefined;
+    }
+
+    // Reset connection state
+    this.isConnected = false;
+    this.isReconnecting = false;
+    this.reconnectAttempts = 0;
+
+    console.log(`[${this.remoteSignerInfo.npub}] NIP-46 daemon stopped`);
+  }
+
+  /**
+   * Get current connection status
+   */
+  getConnectionStatus(): {
+    isConnected: boolean;
+    isReconnecting: boolean;
+    reconnectAttempts: number;
+  } {
+    return {
+      isConnected: this.isConnected,
+      isReconnecting: this.isReconnecting,
+      reconnectAttempts: this.reconnectAttempts,
+    };
   }
 
   protected async handleIncomingEvent(event: NostrEvent): Promise<void> {
