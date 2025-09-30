@@ -59,7 +59,7 @@ export default function KeySelector({
       ) {
         setAutoCreating(true);
         try {
-          const newKey = await createKeyForScope(scopeSlug);
+          await createKeyForScope(scopeSlug);
         } catch (err) {
           console.error('Failed to auto-create key:', err);
         } finally {
