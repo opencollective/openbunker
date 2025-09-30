@@ -143,11 +143,12 @@ export default function UserKeys() {
             Create New Key
           </button>
         </div>
-
-        <CreateKeyModal
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleCreateKey}
-        />
+        {showCreateModal && (
+          <CreateKeyModal
+            onClose={() => setShowCreateModal(false)}
+            onSubmit={handleCreateKey}
+          />
+        )}
       </div>
     );
   }
