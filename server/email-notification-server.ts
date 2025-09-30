@@ -247,7 +247,7 @@ class EmailNotificationServer {
         : 'https://requests.opencollective.xyz/';
 
       const emailOptions: CreateEmailOptions = {
-        from: 'onboarding@resend.dev',
+        from: 'info@updates.qualiaworks.com',
         to: [targetEmail],
         subject: `🎉 New Reply to Your Community Request - ${NOSTR_COMMUNITY_IDENTIFIER}`,
         html: `
