@@ -29,7 +29,7 @@ function OpenBunkerLoginPopupContent() {
     useState<ParsedNostrConnectURI | null>(null);
   // Redirect URL, if not defined, we are in popup mode
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const searchParams = useSearchParams();
 
   // Parse scope, connectionMode, and connectionToken parameters from URL
@@ -362,6 +362,15 @@ function OpenBunkerLoginPopupContent() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // The AuthContext will handle the state update and redirect
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const handlePopupCallback = (message: OpenBunkerAuthMessage) => {
     // Check if we're in redirect mode
     if (redirectUrl) {
@@ -485,10 +494,40 @@ function OpenBunkerLoginPopupContent() {
               </h3>
 
               <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-indigo-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.user_metadata?.full_name ||
+                          user.user_metadata?.name ||
+                          user.email?.split('@')[0] ||
+                          'User'}
+                      </p>
+                      <p className="text-xs text-gray-600">{user.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-md hover:bg-gray-200"
+                    title="Logout"
+                  >
                     <svg
-                      className="w-4 h-4 text-indigo-600"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -497,19 +536,10 @@ function OpenBunkerLoginPopupContent() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                       />
                     </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {user.user_metadata?.full_name ||
-                        user.user_metadata?.name ||
-                        user.email?.split('@')[0] ||
-                        'User'}
-                    </p>
-                    <p className="text-xs text-gray-600">{user.email}</p>
-                  </div>
+                  </button>
                 </div>
               </div>
 

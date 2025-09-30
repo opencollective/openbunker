@@ -9,12 +9,13 @@ interface UseUserKeysReturn {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  createKeyForScope: (scopeSlug: string) => Promise<Keys | null>;
 }
 
 export function useUserKeys(scopeSlug?: string | null): UseUserKeysReturn {
   const { user } = useAuth();
   const [keys, setKeys] = useState<Keys[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchKeys = useCallback(async () => {
@@ -45,6 +46,40 @@ export function useUserKeys(scopeSlug?: string | null): UseUserKeysReturn {
     }
   }, [user, scopeSlug]);
 
+  const createKeyForScope = useCallback(
+    async (scopeSlug: string): Promise<Keys | null> => {
+      if (!user) {
+        return null;
+      }
+
+      try {
+        const response = await fetch('/api/keys', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ scope: scopeSlug }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create key');
+        }
+
+        const data = await response.json();
+
+        // Refresh the keys list to include the new key
+        await fetchKeys();
+
+        return data.key;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create key');
+        console.error('Error creating key:', err);
+        return null;
+      }
+    },
+    [user, fetchKeys]
+  );
+
   useEffect(() => {
     fetchKeys();
   }, [user, fetchKeys]);
@@ -54,5 +89,6 @@ export function useUserKeys(scopeSlug?: string | null): UseUserKeysReturn {
     loading,
     error,
     refetch: fetchKeys,
+    createKeyForScope,
   };
 }

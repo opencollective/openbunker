@@ -2,7 +2,7 @@
 
 import { useUserKeys } from '@/hooks/useUserKeys';
 import { Keys } from '@prisma/client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CreateKeyModal from './CreateKeyModal';
 
 interface KeySelectorProps {
@@ -18,9 +18,11 @@ export default function KeySelector({
   disabled = false,
   scopeSlug,
 }: KeySelectorProps) {
-  const { keys, loading, error, refetch } = useUserKeys(scopeSlug);
+  const { keys, loading, error, refetch, createKeyForScope } =
+    useUserKeys(scopeSlug);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [autoCreating, setAutoCreating] = useState(false);
 
   const copyToClipboard = async (text: string, keyId: string) => {
     try {
@@ -44,13 +46,52 @@ export default function KeySelector({
     onKeySelected(key);
   };
 
-  if (loading) {
+  // Auto-create key when no keys exist for the scope
+  useEffect(() => {
+    const autoCreateKey = async () => {
+      if (
+        !loading &&
+        !error &&
+        (!keys || keys.length === 0) &&
+        scopeSlug &&
+        !autoCreating &&
+        !disabled
+      ) {
+        setAutoCreating(true);
+        try {
+          const newKey = await createKeyForScope(scopeSlug);
+        } catch (err) {
+          console.error('Failed to auto-create key:', err);
+        } finally {
+          setAutoCreating(false);
+        }
+      }
+    };
+
+    autoCreateKey();
+  }, [
+    loading,
+    error,
+    keys,
+    scopeSlug,
+    autoCreating,
+    disabled,
+    createKeyForScope,
+    onKeySelected,
+  ]);
+
+  if (loading || autoCreating) {
     return (
       <div className="space-y-4">
         <div className="animate-pulse">
           <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
           <div className="h-3 bg-gray-300 rounded w-1/2"></div>
         </div>
+        {autoCreating && (
+          <div className="text-center text-sm text-gray-600">
+            Creating identity for {scopeSlug}...
+          </div>
+        )}
       </div>
     );
   }
