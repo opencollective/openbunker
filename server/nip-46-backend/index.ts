@@ -637,6 +637,9 @@ export default class Nip46ScopedDaemon {
       if (response) {
         console.log(`sending response to ${remotePubkey}`, response);
         this.encryptedAdapter.sendResponse(id, remotePubkey, response);
+        console.log(
+          `[${timestamp}] [${this.remoteSignerInfo.npub}] ✅ Request processed successfully`
+        );
       } else {
         this.encryptedAdapter.sendResponse(
           id,
@@ -645,11 +648,10 @@ export default class Nip46ScopedDaemon {
           undefined,
           'Not authorized'
         );
+        console.error(
+          `[${timestamp}] [${this.remoteSignerInfo.npub}] ❌ Error processing request: no response from handler`
+        );
       }
-
-      console.log(
-        `[${timestamp}] [${this.remoteSignerInfo.npub}] ✅ Request processed successfully`
-      );
     } catch (error) {
       console.error(
         `[${timestamp}] [${this.remoteSignerInfo.npub}] ❌ Error processing request:`,
