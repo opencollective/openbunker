@@ -19,6 +19,7 @@ const relays = ['wss://relay.damus.io', 'wss://chorus.community'];
 // Email configuration
 const NOTIFICATION_EMAILS = process.env.NOTIFICATION_EMAILS?.split(',') || [];
 const NOSTR_COMMUNITY_IDENTIFIER = process.env.NOSTR_COMMUNITY_IDENTIFIER || '';
+const COMMUNITY_ID = process.env.NOSTR_COMMUNITY_ID || '';
 
 console.log('Starting Email Notification Server...');
 console.log(`Connecting to relays: ${relays.join(', ')}`);
@@ -109,7 +110,9 @@ class EmailNotificationServer {
     try {
       // Check if this is actually a new request (not a reply)
       const aTags = event.tags.filter(tag => tag[0] === 'a');
-      const pTags = event.tags.filter(tag => tag[0] === 'p');
+      const pTags = event.tags.filter(
+        tag => tag[0] === 'p' && tag[1] !== COMMUNITY_ID
+      );
 
       // If it has p tags, it's likely a reply, skip
       if (pTags.length > 0) {
