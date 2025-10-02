@@ -154,6 +154,30 @@ export async function POST(
       },
     });
 
+    // Get the key information to check if it belongs to a scope
+    const keyInfo = await prisma.keys.findUnique({
+      where: {
+        npub: npub,
+      },
+      select: {
+        scopeSlug: true,
+      },
+    });
+
+    // If the key belongs to a scope, get the scope's keyNpub
+    let scopeKeyNpub = null;
+    if (keyInfo?.scopeSlug) {
+      const scope = await prisma.scopes.findUnique({
+        where: {
+          slug: keyInfo.scopeSlug,
+        },
+        select: {
+          keyNpub: true,
+        },
+      });
+      scopeKeyNpub = scope?.keyNpub || null;
+    }
+
     // Return the created token
     const responseToken = {
       token: newToken.token,
@@ -163,6 +187,7 @@ export async function POST(
       expiry: Number(newToken.expiry),
       jsonData: newToken.jsonData ? JSON.parse(newToken.jsonData) : null,
       isExpired: false,
+      scopeKeyNpub: scopeKeyNpub, // Include the scope's key for bunker URL generation
     };
 
     return NextResponse.json({ token: responseToken });

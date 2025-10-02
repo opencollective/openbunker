@@ -14,6 +14,9 @@ export default function KeyDetailPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [showTokenPopup, setShowTokenPopup] = useState(false);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [createdTokenScopeKey, setCreatedTokenScopeKey] = useState<
+    string | null
+  >(null);
   const [creating, setCreating] = useState(false);
 
   const npub = params.npub as string;
@@ -34,10 +37,14 @@ export default function KeyDetailPage() {
     return `${npub.substring(0, 10)}...${npub.substring(npub.length - 10)}`;
   };
 
-  const buildBunkerUrl = (token: string) => {
+  const buildBunkerUrl = (token: string, scopeKeyNpub?: string | null) => {
     const relays =
       process.env.NEXT_PUBLIC_BUNKER_RELAYS || 'wss://relay.nsec.app';
-    const pubkey = nip19.decode(npub).data;
+
+    // Use scope's public key if available, otherwise fall back to user's public key
+    const pubkey = scopeKeyNpub
+      ? nip19.decode(scopeKeyNpub).data
+      : nip19.decode(npub).data;
 
     const url = new URL(`bunker://${pubkey}`);
     url.searchParams.set('secret', token);
@@ -58,6 +65,7 @@ export default function KeyDetailPage() {
       const newToken = await createToken();
       if (newToken) {
         setCreatedToken(newToken.token);
+        setCreatedTokenScopeKey(newToken.scopeKeyNpub || null);
         setShowTokenPopup(true);
       }
     } catch (error) {
@@ -70,6 +78,7 @@ export default function KeyDetailPage() {
   const handleClosePopup = () => {
     setShowTokenPopup(false);
     setCreatedToken(null);
+    setCreatedTokenScopeKey(null);
   };
 
   if (loading) {
@@ -393,12 +402,12 @@ export default function KeyDetailPage() {
                   </label>
                   <div className="flex items-center space-x-2">
                     <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono break-all text-gray-900">
-                      {buildBunkerUrl(createdToken)}
+                      {buildBunkerUrl(createdToken, createdTokenScopeKey)}
                     </code>
                     <button
                       onClick={() =>
                         copyToClipboard(
-                          buildBunkerUrl(createdToken),
+                          buildBunkerUrl(createdToken, createdTokenScopeKey),
                           'bunker-url'
                         )
                       }
