@@ -76,6 +76,9 @@ class MultiBunkerServer {
     console.log('Scanning database for scopes and connection tokens...');
 
     try {
+      // First, clean up expired tokens
+      await this.cleanupExpiredTokens();
+
       // Get all scopes with their associated keys
       const scopes = await prisma.scopes.findMany({
         include: {
@@ -85,34 +88,34 @@ class MultiBunkerServer {
 
       console.log(`Found ${scopes.length} scopes in database`);
 
-      // Get all non-expired connection tokens
-      const now = BigInt(Date.now());
-      const connectionTokens = await prisma.connectTokens.findMany({
-        where: {
-          expiry: {
-            gt: now,
-          },
-        },
-      });
-
-      console.log(
-        `Found ${connectionTokens.length} non-expired connection tokens`
-      );
-
-      // Group tokens by npub
-      const tokensByNpub = new Map<string, typeof connectionTokens>();
-      for (const token of connectionTokens) {
-        if (!tokensByNpub.has(token.npub)) {
-          tokensByNpub.set(token.npub, []);
-        }
-        tokensByNpub.get(token.npub)!.push(token);
-      }
-
       // Store the data for bunker creation
       this.scopes = scopes;
     } catch (error) {
       console.error('Error scanning database:', error);
       throw error;
+    }
+  }
+
+  private async cleanupExpiredTokens() {
+    try {
+      const currentTimestamp = BigInt(Date.now());
+
+      // Delete expired connection tokens
+      const deletedTokens = await prisma.connectTokens.deleteMany({
+        where: {
+          expiry: {
+            lt: currentTimestamp,
+          },
+        },
+      });
+
+      if (deletedTokens.count > 0) {
+        console.log(
+          `Cleaned up ${deletedTokens.count} expired connection tokens`
+        );
+      }
+    } catch (error) {
+      console.error('Error cleaning up expired tokens:', error);
     }
   }
 

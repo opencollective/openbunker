@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/db';
 import { NDKEvent, NDKPrivateKeySigner, NIP46Method } from '@nostr-dev-kit/ndk';
 import { Keys } from '@prisma/client';
-import { createClient } from '@supabase/supabase-js';
 import {
   generateSecretKey,
   getPublicKey,
@@ -393,53 +392,6 @@ export default class Nip46ScopedDaemon {
         return newSession;
       } else {
         console.log(`Token: ${token} is not created in the database`);
-
-        const [secret, email] = token.split('+');
-
-        if (secret.length === 6 && email) {
-          // We'll assume the token was sent by email to the user, attempt to verify it
-          if (
-            !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-            !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-          ) {
-            console.error('Missing Supabase environment variables');
-            return null;
-          }
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-          );
-
-          const { error: verifyError } = await supabase.auth.verifyOtp({
-            token: secret,
-            type: 'email',
-            email: email,
-          });
-          if (verifyError) {
-            console.log(`Token: ${token} is invalid`);
-            return null;
-          } else {
-            console.log(`Token: ${token} is valid, creating session`);
-
-            const key = await this.getOrCreateKeyFromEmail(
-              email,
-              this.bunkerScope
-            );
-            if (!key) {
-              console.log(`Key: ${email} is not found in the database`);
-              return null;
-            }
-            const newSession = await prisma.sessions.create({
-              data: {
-                npub: key.npub,
-                sessionNpub: remoteNpub,
-                scopeSlug: this.bunkerScope || null,
-                expiresAt: BigInt(Date.now() + 1000 * 60 * 60 * 24 * 90), // 90 days
-              },
-            });
-            return newSession;
-          }
-        }
         return null;
       }
     } else {
