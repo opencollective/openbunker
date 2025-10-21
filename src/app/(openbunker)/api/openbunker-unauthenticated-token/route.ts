@@ -200,7 +200,6 @@ export async function POST(request: NextRequest) {
         expiry: BigInt(expiry),
         jsonData: JSON.stringify({
           email: email,
-          verificationCode: verificationCode,
           scope: scope,
           userId: user.id,
         }),
