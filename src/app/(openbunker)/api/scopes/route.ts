@@ -38,6 +38,14 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc',
       },
+      include: {
+        key: {
+          select: {
+            npub: true,
+            name: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({ scopes: scopes });
