@@ -4,29 +4,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
-  const { user, loading, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const router = useRouter();
 
-  if (loading) {
+  // Show loading state while auth is being checked
+  // Middleware will redirect to /login if not authenticated
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100">
-        <div className="text-center">
-          <p className="text-gray-600">Redirecting to login...</p>
-        </div>
-      </div>
-    );
-  }
+  // TypeScript type narrowing - user is guaranteed to be non-null here
+  // since middleware redirects unauthenticated users to /login
+  const currentUser = user;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-purple-100 py-12 px-4">
@@ -44,21 +40,21 @@ export default function ProfilePage() {
           <div className="flex items-center space-x-6 mb-8">
             <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
               <span className="text-white text-2xl font-semibold">
-                {user.user_metadata?.full_name?.charAt(0) ||
-                  user.email?.charAt(0)?.toUpperCase() ||
+                {currentUser.user_metadata?.full_name?.charAt(0) ||
+                  currentUser.email?.charAt(0)?.toUpperCase() ||
                   'U'}
               </span>
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-semibold text-gray-900">
-                {user.user_metadata?.full_name ||
-                  user.user_metadata?.name ||
+                {currentUser.user_metadata?.full_name ||
+                  currentUser.user_metadata?.name ||
                   'User'}
               </h2>
-              <p className="text-gray-600">{user.email}</p>
-              {user.user_metadata?.provider && (
+              <p className="text-gray-600">{currentUser.email}</p>
+              {currentUser.user_metadata?.provider && (
                 <p className="text-sm text-indigo-600 capitalize mt-1">
-                  Connected via {user.user_metadata.provider}
+                  Connected via {currentUser.user_metadata.provider}
                 </p>
               )}
             </div>
@@ -67,46 +63,50 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600 font-medium">User ID</span>
-              <span className="font-mono text-sm text-gray-900">{user.id}</span>
+              <span className="font-mono text-sm text-gray-900">
+                {currentUser.id}
+              </span>
             </div>
 
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600 font-medium">Email</span>
-              <span className="font-medium text-gray-900">{user.email}</span>
+              <span className="font-medium text-gray-900">
+                {currentUser.email}
+              </span>
             </div>
 
-            {user.user_metadata?.full_name && (
+            {currentUser.user_metadata?.full_name && (
               <div className="flex justify-between items-center py-3 border-b border-gray-100">
                 <span className="text-gray-600 font-medium">Full Name</span>
                 <span className="font-medium text-gray-900">
-                  {user.user_metadata.full_name}
+                  {currentUser.user_metadata.full_name}
                 </span>
               </div>
             )}
 
-            {user.user_metadata?.name && (
+            {currentUser.user_metadata?.name && (
               <div className="flex justify-between items-center py-3 border-b border-gray-100">
                 <span className="text-gray-600 font-medium">Display Name</span>
                 <span className="font-medium text-gray-900">
-                  {user.user_metadata.name}
+                  {currentUser.user_metadata.name}
                 </span>
               </div>
             )}
 
-            {user.user_metadata?.provider && (
+            {currentUser.user_metadata?.provider && (
               <div className="flex justify-between items-center py-3 border-b border-gray-100">
                 <span className="text-gray-600 font-medium">Provider</span>
                 <span className="font-medium text-gray-900 capitalize">
-                  {user.user_metadata.provider}
+                  {currentUser.user_metadata.provider}
                 </span>
               </div>
             )}
 
-            {user.user_metadata?.avatar_url && (
+            {currentUser.user_metadata?.avatar_url && (
               <div className="flex justify-between items-center py-3 border-b border-gray-100">
                 <span className="text-gray-600 font-medium">Avatar</span>
                 <span className="font-medium text-gray-900">
-                  {user.user_metadata.avatar_url}
+                  {currentUser.user_metadata.avatar_url}
                 </span>
               </div>
             )}
@@ -114,22 +114,22 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600 font-medium">Email Verified</span>
               <span className="font-medium text-gray-900">
-                {user.email_confirmed_at ? 'Yes' : 'No'}
+                {currentUser.email_confirmed_at ? 'Yes' : 'No'}
               </span>
             </div>
 
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600 font-medium">Account Created</span>
               <span className="font-medium text-gray-900">
-                {new Date(user.created_at).toLocaleDateString()}
+                {new Date(currentUser.created_at).toLocaleDateString()}
               </span>
             </div>
 
-            {user.last_sign_in_at && (
+            {currentUser.last_sign_in_at && (
               <div className="flex justify-between items-center py-3 border-b border-gray-100">
                 <span className="text-gray-600 font-medium">Last Sign In</span>
                 <span className="font-medium text-gray-900">
-                  {new Date(user.last_sign_in_at).toLocaleDateString()}
+                  {new Date(currentUser.last_sign_in_at).toLocaleDateString()}
                 </span>
               </div>
             )}

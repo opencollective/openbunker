@@ -10,7 +10,7 @@ interface AuthContextType {
   currentSession: Session | null;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  authenticateWithOpenBunker: (isInPopup: boolean) => Promise<string>;
+  authenticateWithOpenBunker: () => Promise<string>;
   checkOpenBunkerCallback: (secretKey: string) => Promise<void>;
   sendMagicLink: (email: string) => Promise<void>;
   handleOtp: (email: string, token: string) => Promise<void>;
