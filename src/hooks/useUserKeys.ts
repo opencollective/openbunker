@@ -21,6 +21,7 @@ export function useUserKeys(scopeSlug?: string | null): UseUserKeysReturn {
   const fetchKeys = useCallback(async () => {
     if (!user) {
       setKeys([]);
+      setLoading(false);
       return;
     }
 
