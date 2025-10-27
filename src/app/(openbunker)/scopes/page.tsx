@@ -453,13 +453,13 @@ export default function ScopesPage() {
                                   Public Key (hex)
                                 </div>
                                 <div className="font-mono text-xs text-gray-800 break-all">
-                                  {npubToHex(scope.key.npub)}
+                                  {npubToHex(scope?.key?.npub || '')}
                                 </div>
                               </div>
                               <button
                                 onClick={() =>
                                   copyToClipboard(
-                                    npubToHex(scope?.key.npub),
+                                    npubToHex(scope?.key?.npub || ''),
                                     `hex-${scope.id}`
                                   )
                                 }
