@@ -439,7 +439,7 @@ function OpenBunkerLoginPopupContent() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-xl p-6">
-              <OpenBunkerLogin isInPopup={true} />
+              <OpenBunkerLogin />
             </div>
 
             {/* Footer */}

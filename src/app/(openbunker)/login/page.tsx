@@ -42,7 +42,7 @@ export default function LoginPage() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-6">
-            <OpenBunkerLogin isInPopup={false} />
+            <OpenBunkerLogin />
           </div>
 
           {/* Footer */}

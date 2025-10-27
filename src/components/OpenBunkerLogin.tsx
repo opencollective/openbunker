@@ -3,21 +3,14 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 
-interface OpenBunkerLoginProps {
-  isInPopup?: boolean;
-}
-
-export default function OpenBunkerLogin({
-  isInPopup = false,
-}: OpenBunkerLoginProps) {
+export default function OpenBunkerLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showMagicLinkForm, setShowMagicLinkForm] = useState(false);
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const { authenticateWithOpenBunker, sendMagicLink, signIn, handleOtp } =
-    useAuth();
+  const { authenticateWithOpenBunker, signIn, handleOtp } = useAuth();
 
   const handleOpenBunkerAuth = async () => {
     setLoading(true);
@@ -233,7 +226,7 @@ export default function OpenBunkerLogin({
       <div className="text-center">
         <p className="text-xs text-gray-500">
           <strong>How it works:</strong> Choose between Discord OAuth for a new
-          Nostr key or use 'email verification with OTP' .
+          Nostr key or use &apos;email verification with OTP&apos; .
         </p>
       </div>
     </div>
