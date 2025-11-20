@@ -16,7 +16,8 @@
     "dev:all": "concurrently \"npm run multi-bunker\" \"npm run dev\"",
     "dev:with-email": "concurrently \"npm run multi-bunker\" \"npm run email-notifications\" \"npm run dev\"",
     "format": "prettier --write .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "key:convert": "tsx server/nip19-key-converter.ts --"
   },
   "dependencies": {
     "@nostr-dev-kit/ndk": "^2.14.35",
