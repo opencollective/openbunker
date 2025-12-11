@@ -184,3 +184,82 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { slug } = await params;
+
+    // Get the scope by slug
+    const scope = await prisma.scopes.findUnique({
+      where: {
+        slug: slug,
+      },
+      include: {
+        key: true,
+      },
+    });
+
+    if (!scope) {
+      return NextResponse.json({ error: 'Scope not found' }, { status: 404 });
+    }
+
+    // Check if user is the scope owner
+    if (scope.owner !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Store the key npub before deleting the scope
+    const keyNpub = scope.key?.npub;
+
+    // Delete the scope first (removes foreign key constraint)
+    await prisma.scopes.delete({
+      where: {
+        slug: slug,
+      },
+    });
+
+    // Then try to delete the associated key if it exists
+    // Note: Keys may be shared with UserKeys, so deletion might fail
+    if (keyNpub) {
+      try {
+        // Check if key is used by UserKeys before attempting deletion
+        const userKeyCount = await prisma.userKeys.count({
+          where: { npub: keyNpub },
+        });
+
+        // Only delete if not used by UserKeys
+        if (userKeyCount === 0) {
+          await prisma.keys.delete({
+            where: {
+              npub: keyNpub,
+            },
+          });
+        }
+      } catch {
+        // Key might be in use elsewhere, ignore error
+        // The key will remain but won't be associated with this scope
+      }
+    }
+
+    return NextResponse.json({ success: true, message: 'Scope deleted' });
+  } catch (error) {
+    console.error('Error deleting scope:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
