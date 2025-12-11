@@ -69,8 +69,6 @@ NEXT_PUBLIC_SUPABASE_URL=https://yourprojecturl.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=xyz
 SUPABASE_URL=https://yourprojecturl.supabase.co
 SUPABASE_ANON_KEY=xyz
-DISCORD_CLIENT_ID=x
-DISCORD_CLIENT_SECRET=x
 
 PASS_PRISMA=your_password
 DATABASE_URL=postgresql://prisma.yourprojecturl:your_password@aws-0-eu-central-1.pooler.supabase.com:5432/postgres

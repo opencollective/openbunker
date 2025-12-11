@@ -21,6 +21,7 @@ model Scopes {
   description String
   owner     String   // User ID who owns this scope
   keyNpub   String   // Generated key for this scope
+  allowedApplications Json?  // Array of allowed application pubkeys or URLs
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

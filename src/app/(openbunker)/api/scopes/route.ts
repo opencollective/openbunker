@@ -1,4 +1,8 @@
 import { prisma } from '@/lib/db';
+import {
+  normalizeAppIdentifiers,
+  validateAppIdentifier,
+} from '@/lib/nostr/appIdentifier';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { bytesToHex } from '@noble/hashes/utils';
 import { randomBytes } from 'crypto';
@@ -48,7 +52,13 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ scopes: scopes });
+    // Include allowedApplications in response
+    const scopesWithAllowedApps = scopes.map(scope => ({
+      ...scope,
+      allowedApplications: scope.allowedApplications,
+    }));
+
+    return NextResponse.json({ scopes: scopesWithAllowedApps });
   } catch (error) {
     console.error('Error fetching scopes:', error);
     return NextResponse.json(
@@ -166,7 +176,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, description, slug } = body;
+    const { id, name, description, slug, allowedApplications } = body;
 
     if (!id || !name || !description || !slug) {
       return NextResponse.json(
@@ -205,17 +215,63 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Prepare update data
+    const updateData: {
+      name: string;
+      description: string;
+      slug: string;
+      allowedApplications?: string[] | undefined;
+      updatedAt: Date;
+    } = {
+      name: name,
+      description: description,
+      slug: slug,
+      updatedAt: new Date(),
+    };
+
+    // Handle allowedApplications if provided
+    if (allowedApplications !== undefined) {
+      if (
+        allowedApplications === null ||
+        (Array.isArray(allowedApplications) && allowedApplications.length === 0)
+      ) {
+        updateData.allowedApplications = undefined;
+      } else if (Array.isArray(allowedApplications)) {
+        // Validate each identifier
+        const invalidIdentifiers: string[] = [];
+        for (const identifier of allowedApplications) {
+          const validation = validateAppIdentifier(identifier);
+          if (!validation.valid) {
+            invalidIdentifiers.push(identifier);
+          }
+        }
+
+        if (invalidIdentifiers.length > 0) {
+          return NextResponse.json(
+            {
+              error: `Invalid application identifier format: ${invalidIdentifiers.join(', ')}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        // Normalize identifiers (convert npub to hex, remove duplicates)
+        const normalized = normalizeAppIdentifiers(allowedApplications);
+        updateData.allowedApplications = normalized;
+      } else {
+        return NextResponse.json(
+          { error: 'allowedApplications must be an array or null' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update the scope
     const updatedScope = await prisma.scopes.update({
       where: {
         id: id,
       },
-      data: {
-        name: name,
-        description: description,
-        slug: slug,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       include: {
         key: true,
       },
@@ -225,6 +281,7 @@ export async function PUT(request: NextRequest) {
       success: true,
       scope: {
         ...updatedScope,
+        allowedApplications: updatedScope.allowedApplications,
         key: {
           npub: updatedScope.key.npub,
           nsec: updatedScope.key.nsec,

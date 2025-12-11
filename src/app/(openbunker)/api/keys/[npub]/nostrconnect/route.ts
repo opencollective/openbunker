@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/db';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
 import {
   ParsedNostrConnectURI,
   parseNostrConnectURI,
-} from '@/utils/nip46Utils';
+} from '@/lib/nostr/nip46Utils';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { hexToBytes } from '@noble/hashes/utils';
 import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
 import { NextRequest, NextResponse } from 'next/server';

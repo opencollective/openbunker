@@ -3,13 +3,13 @@
 import KeySelector from '@/components/KeySelector';
 import OpenBunkerLogin from '@/components/OpenBunkerLogin';
 import { useAuth } from '@/contexts/AuthContext';
-import { OpenBunkerAuthMessage } from '@/types/openbunkerApiTypes';
 import {
   isValidNostrConnectToken,
   ParsedNostrConnectURI,
   parseNostrConnectURI,
   validateBunkerUrl,
-} from '@/utils/nip46Utils';
+} from '@/lib/nostr/nip46Utils';
+import { OpenBunkerAuthMessage } from '@/types/openbunkerApiTypes';
 import { Keys } from '@prisma/client';
 import { useSearchParams } from 'next/navigation';
 import { nip19 } from 'nostr-tools';

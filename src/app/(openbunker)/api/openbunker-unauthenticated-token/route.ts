@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db';
+import { getApplicationProfile } from '@/lib/nostr/appProfile';
 import { NIP46_RELAYS } from '@/lib/nostr/consts';
+import { validateAppAllowed } from '@/lib/scopes/restrictions';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { nip19 } from 'nostr-tools';
@@ -52,8 +54,38 @@ async function createOrGetUser(email: string) {
 async function sendVerificationEmail(
   email: string,
   code: string,
-  scope: string
+  scope: string,
+  appProfile?: {
+    name?: string;
+    icon?: string;
+    description?: string;
+  } | null
 ) {
+  // Prepare application info section
+  let appInfoSection = '';
+  if (appProfile && (appProfile.name || appProfile.icon)) {
+    const appName = appProfile.name || 'Unknown Application';
+    const appIcon = appProfile.icon
+      ? `<img src="${appProfile.icon}" alt="${appName}" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; vertical-align: middle;" />`
+      : '';
+    const appDescription = appProfile.description
+      ? `<p style="font-size: 14px; color: #6b7280; margin-top: 8px;">${appProfile.description}</p>`
+      : '';
+
+    appInfoSection = `
+      <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #d97706;">
+        <div style="display: flex; align-items: center; margin-bottom: ${appProfile.description ? '8px' : '0'};">
+          ${appIcon}
+          <div>
+            <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">Requesting Application</p>
+            <p style="font-size: 18px; color: #111827; margin: 4px 0 0 0; font-weight: 600;">${appName}</p>
+          </div>
+        </div>
+        ${appDescription}
+      </div>
+    `;
+  }
+
   const { error } = await resend.emails.send({
     from: 'Openbunker <info@updates.qualiaworks.com>',
     to: [email],
@@ -68,6 +100,8 @@ async function sendVerificationEmail(
           <p style="font-size: 16px; line-height: 1.5; color: #374151; margin-bottom: 20px;">
             You have requested to use your email and Openbunker to connect to a NOSTR application within the community : <strong>${scope}</strong>!
           </p>
+          
+          ${appInfoSection}
           
           <p style="font-size: 16px; line-height: 1.5; color: #374151; margin-bottom: 20px;">
             Use the following code to confirm your connection:
@@ -99,7 +133,7 @@ async function sendVerificationEmail(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email, appUrl } = body;
 
     // Validate required fields
     if (!email) {
@@ -108,6 +142,25 @@ export async function POST(request: NextRequest) {
 
     // Get scope from request body - scope is required
     const scope = body.scope;
+
+    // Fetch application profile if appUrl is provided (non-blocking)
+    let appProfile = null;
+    if (appUrl && typeof appUrl === 'string') {
+      try {
+        appProfile = await getApplicationProfile(appUrl);
+        console.log('Fetched application profile:', {
+          name: appProfile?.name,
+          icon: appProfile?.icon,
+          pubkey: appProfile?.pubkey,
+        });
+      } catch (error) {
+        console.error(
+          'Error fetching application profile (non-blocking):',
+          error
+        );
+        // Continue with null profile - email will be sent without app info
+      }
+    }
 
     // Get scope configuration from database using Prisma
     let scopeConfig = null;
@@ -136,6 +189,22 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Validate application against scope restrictions if appUrl is provided
+    if (appUrl && typeof appUrl === 'string') {
+      const isAllowed = await validateAppAllowed(
+        appUrl,
+        (scopeConfig.allowedApplications as string[] | null | undefined) ?? null
+      );
+      if (!isAllowed) {
+        return NextResponse.json(
+          {
+            error: 'Application not allowed in this scope',
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Find or create the key for the user and scope using email
@@ -206,8 +275,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send verification email
-    await sendVerificationEmail(email, verificationCode, scope);
+    // Send verification email (with app profile if available)
+    await sendVerificationEmail(email, verificationCode, scope, appProfile);
 
     // Generate bunker connection token
     let bunkerConnectionToken;
