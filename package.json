@@ -16,6 +16,9 @@
     "dev:all": "concurrently \"npm run multi-bunker\" \"npm run dev\"",
     "dev:with-email": "concurrently \"npm run multi-bunker\" \"npm run email-notifications\" \"npm run dev\"",
     "format": "prettier --write .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "prepare": "husky"
   },
   "dependencies": {
@@ -39,6 +42,8 @@
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
@@ -46,9 +51,12 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
     "husky": "^9.1.7",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
     "prettier": "^3.6.2",
     "prisma": "^6.10.1",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.6",
     "tsx": "^4.0.0",
     "typescript": "^5"
   }
