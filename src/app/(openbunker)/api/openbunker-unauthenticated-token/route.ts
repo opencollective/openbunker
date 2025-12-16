@@ -1,14 +1,11 @@
 import { prisma } from '@/lib/db';
+import { sendVerificationEmail } from '@/lib/emails/verificationEmail';
 import { getApplicationProfile } from '@/lib/nostr/appProfile';
 import { NIP46_RELAYS } from '@/lib/nostr/consts';
 import { validateAppAllowed } from '@/lib/scopes/restrictions';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { nip19 } from 'nostr-tools';
-import { Resend } from 'resend';
-
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Helper function to generate 6-digit code
 function generateSixDigitCode(): string {
@@ -50,86 +47,6 @@ async function createOrGetUser(email: string) {
   return newUser.user;
 }
 
-// Helper function to send verification email
-async function sendVerificationEmail(
-  email: string,
-  code: string,
-  scope: string,
-  appProfile?: {
-    name?: string;
-    icon?: string;
-    description?: string;
-  } | null
-) {
-  // Prepare application info section
-  let appInfoSection = '';
-  if (appProfile && (appProfile.name || appProfile.icon)) {
-    const appName = appProfile.name || 'Unknown Application';
-    const appIcon = appProfile.icon
-      ? `<img src="${appProfile.icon}" alt="${appName}" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; vertical-align: middle;" />`
-      : '';
-    const appDescription = appProfile.description
-      ? `<p style="font-size: 14px; color: #6b7280; margin-top: 8px;">${appProfile.description}</p>`
-      : '';
-
-    appInfoSection = `
-      <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #d97706;">
-        <div style="display: flex; align-items: center; margin-bottom: ${appProfile.description ? '8px' : '0'};">
-          ${appIcon}
-          <div>
-            <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">Requesting Application</p>
-            <p style="font-size: 18px; color: #111827; margin: 4px 0 0 0; font-weight: 600;">${appName}</p>
-          </div>
-        </div>
-        ${appDescription}
-      </div>
-    `;
-  }
-
-  const { error } = await resend.emails.send({
-    from: 'Openbunker <info@updates.qualiaworks.com>',
-    to: [email],
-    subject: 'Confirm your connection to Openbunker',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #d97706; margin: 0; font-size: 28px;">🔐 Connection Confirmation</h1>
-        </div>
-        
-        <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-          <p style="font-size: 16px; line-height: 1.5; color: #374151; margin-bottom: 20px;">
-            You have requested to use your email and Openbunker to connect to a NOSTR application within the community : <strong>${scope}</strong>!
-          </p>
-          
-          ${appInfoSection}
-          
-          <p style="font-size: 16px; line-height: 1.5; color: #374151; margin-bottom: 20px;">
-            Use the following code to confirm your connection:
-          </p>
-          
-          <div style="text-align: center; margin: 25px 0;">
-            <div style="background: #f3f4f6; border: 2px solid #d97706; border-radius: 8px; padding: 20px; display: inline-block;">
-              <span style="font-size: 32px; font-weight: bold; color: #d97706; letter-spacing: 4px;">${code}</span>
-            </div>
-          </div>
-          
-          <p style="font-size: 14px; color: #6b7280; text-align: center; margin-top: 20px;">
-            This code will expire in 10 minutes.
-          </p>
-        </div>
-        
-        <div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-          <p style="margin: 2px 0;">This is an automated message from Openbunker</p>
-        </div>
-      </div>
-    `,
-  });
-
-  if (error) {
-    throw new Error(`Failed to send verification email: ${error.message}`);
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -147,11 +64,21 @@ export async function POST(request: NextRequest) {
     let appProfile = null;
     if (appUrl && typeof appUrl === 'string') {
       try {
-        appProfile = await getApplicationProfile(appUrl);
+        const fetchedProfile = await getApplicationProfile(appUrl);
+        if (fetchedProfile) {
+          // Map the profile to include url for email template
+          appProfile = {
+            name: fetchedProfile.name,
+            icon: fetchedProfile.icon,
+            description: fetchedProfile.description,
+            url: fetchedProfile.canonicalUrl || appUrl,
+          };
+        }
         console.log('Fetched application profile:', {
           name: appProfile?.name,
           icon: appProfile?.icon,
-          pubkey: appProfile?.pubkey,
+          url: appProfile?.url,
+          pubkey: fetchedProfile?.pubkey,
         });
       } catch (error) {
         console.error(
@@ -276,7 +203,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Send verification email (with app profile if available)
-    await sendVerificationEmail(email, verificationCode, scope, appProfile);
+    await sendVerificationEmail({
+      email,
+      code: verificationCode,
+      scopeName: scopeConfig.name,
+      appProfile,
+    });
 
     // Generate bunker connection token
     let bunkerConnectionToken;

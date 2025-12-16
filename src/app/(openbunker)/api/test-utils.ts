@@ -10,7 +10,8 @@ import { POST } from './scopes/route';
 
 // Helper function to set request context for cookies() mock
 // Note: Each test file should have its own currentRequest variable and mock setup
-export const setRequest = (_request: NextRequest) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const setRequest = (request: NextRequest) => {
   // This is a no-op here - test files should override this with their own implementation
   // or use the mock setup from their test file
 };
