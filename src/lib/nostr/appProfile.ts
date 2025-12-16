@@ -2,7 +2,6 @@
  * Application Profile Fetching
  *
  * Fetches application profile information (kind: 0 events) from Nostr relays.
- * Implements caching to reduce relay queries.
  */
 
 import { resolveNip05 } from '@/lib/nostr/nip05Utils';
@@ -26,21 +25,6 @@ interface AppProfile {
   description?: string;
   fetchedAt: number;
 }
-
-interface ProfileCacheEntry {
-  profile: AppProfile;
-  expiresAt: number;
-}
-
-// In-memory cache for application profiles
-// Key: pubkey (hex) or canonical URL, Value: cache entry with profile and expiration
-const profileCache = new Map<string, ProfileCacheEntry>();
-
-// FIXME: if next js serving is happening in several processes this is not useful.
-// research local next JS deployment documentation to see if that is the case
-// (in serverless it will not be)
-// Cache TTL: 30 minutes (1800000 ms)
-const CACHE_TTL_MS = 30 * 60 * 1000;
 
 /**
  * Fetches a kind: 0 event from Nostr relays for a given pubkey
@@ -117,13 +101,6 @@ export async function fetchAppProfile(
   relays?: string[]
 ): Promise<AppProfile | null> {
   try {
-    // Check cache first
-    const cached = profileCache.get(pubkey);
-    if (cached && cached.expiresAt > Date.now()) {
-      console.log(`[AppProfile] Cache hit for pubkey ${pubkey}`);
-      return cached.profile;
-    }
-
     // Fetch kind: 0 event
     const event = await fetchKind0Event(pubkey, relays);
     if (!event) {
@@ -143,13 +120,7 @@ export async function fetchAppProfile(
       fetchedAt: Date.now(),
     };
 
-    // Cache the result
-    profileCache.set(pubkey, {
-      profile,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    });
-
-    console.log(`[AppProfile] Fetched and cached profile for ${pubkey}:`, {
+    console.log(`[AppProfile] Fetched profile for ${pubkey}:`, {
       name: profile.name,
       hasIcon: !!profile.icon,
       hasDescription: !!profile.description,
@@ -177,12 +148,6 @@ export async function getApplicationProfile(
   relays?: string[]
 ): Promise<AppProfile | null> {
   try {
-    // Check cache first (by canonical URL)
-    const cached = profileCache.get(canonicalUrl);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.profile;
-    }
-
     // Resolve NIP-05 to get pubkey
     const pubkey = await resolveNip05(canonicalUrl);
     if (!pubkey) {
@@ -209,18 +174,9 @@ export async function getApplicationProfile(
       return fallbackProfile;
     }
 
+    console.log('Fetched profile:', profile);
     // Add canonical URL to profile
     profile.canonicalUrl = canonicalUrl;
-
-    // Cache by both pubkey and canonical URL
-    profileCache.set(pubkey, {
-      profile,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    });
-    profileCache.set(canonicalUrl, {
-      profile,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    });
 
     return profile;
   } catch (error) {
@@ -233,29 +189,4 @@ export async function getApplicationProfile(
       fetchedAt: Date.now(),
     };
   }
-}
-
-/**
- * Clears the application profile cache
- */
-export function clearAppProfileCache(): void {
-  profileCache.clear();
-}
-
-/**
- * Gets cache statistics (for debugging/monitoring)
- */
-export function getAppProfileCacheStats(): { size: number; entries: number } {
-  // Clean expired entries
-  const now = Date.now();
-  for (const [key, entry] of profileCache.entries()) {
-    if (entry.expiresAt <= now) {
-      profileCache.delete(key);
-    }
-  }
-
-  return {
-    size: profileCache.size,
-    entries: profileCache.size,
-  };
 }

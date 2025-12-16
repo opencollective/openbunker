@@ -1,12 +1,10 @@
-import { clearNip05Cache, resolveNip05 } from '../nip05Utils';
+import { resolveNip05 } from '../nip05Utils';
 
 // Mock fetch globally
 global.fetch = jest.fn();
 
 describe('resolveNip05', () => {
   beforeEach(() => {
-    // Clear cache before each test
-    clearNip05Cache();
     // Clear fetch mocks
     jest.clearAllMocks();
   });

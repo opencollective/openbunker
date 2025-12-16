@@ -1,10 +1,6 @@
 import { resolveNip05 } from '@/lib/nostr/nip05Utils';
 import { SimplePool, type Event } from 'nostr-tools';
-import {
-  clearAppProfileCache,
-  fetchAppProfile,
-  getApplicationProfile,
-} from '../appProfile';
+import { fetchAppProfile, getApplicationProfile } from '../appProfile';
 
 // Mock dependencies
 jest.mock('../nip05Utils');
@@ -25,8 +21,6 @@ describe('appProfile', () => {
   };
 
   beforeEach(() => {
-    // Clear cache before each test
-    clearAppProfileCache();
     jest.clearAllMocks();
 
     // Setup SimplePool mock
@@ -35,7 +29,9 @@ describe('appProfile', () => {
       close: jest.fn(),
     };
 
-    MockedSimplePool.mockImplementation(() => mockPool as unknown as SimplePool);
+    MockedSimplePool.mockImplementation(
+      () => mockPool as unknown as SimplePool
+    );
   });
 
   describe('fetchAppProfile', () => {
@@ -140,33 +136,6 @@ describe('appProfile', () => {
       expect(mockPool.close).toHaveBeenCalledTimes(1);
     });
 
-    it('should cache fetched profiles', async () => {
-      const mockEvent: Event = {
-        id: 'event-id-cache',
-        pubkey: mockPubkey,
-        created_at: Math.floor(Date.now() / 1000),
-        kind: 0,
-        tags: [],
-        sig: 'signature',
-        content: JSON.stringify({
-          name: 'Cached App',
-        }),
-      };
-
-      mockPool.get.mockResolvedValueOnce(mockEvent);
-
-      // First call
-      const result1 = await fetchAppProfile(mockPubkey);
-      expect(result1).not.toBeNull();
-      expect(mockPool.get).toHaveBeenCalledTimes(1);
-
-      // Second call should use cache
-      const result2 = await fetchAppProfile(mockPubkey);
-      expect(result2).not.toBeNull();
-      expect(mockPool.get).toHaveBeenCalledTimes(1); // Still 1, not 2
-      expect(result2?.name).toBe('Cached App');
-    });
-
     it('should handle invalid JSON in event content gracefully', async () => {
       const mockEvent: Event = {
         id: 'event-id-invalid',
@@ -251,36 +220,6 @@ describe('appProfile', () => {
       expect(result?.canonicalUrl).toBe(canonicalUrl);
       expect(result?.name).toBe(canonicalUrl);
       expect(mockPool.get).toHaveBeenCalledTimes(1);
-    });
-
-    it('should cache by both pubkey and canonical URL', async () => {
-      mockResolveNip05.mockResolvedValueOnce(mockPubkey);
-
-      const mockEvent: Event = {
-        id: 'event-id-cache-test',
-        pubkey: mockPubkey,
-        created_at: Math.floor(Date.now() / 1000),
-        kind: 0,
-        tags: [],
-        sig: 'signature',
-        content: JSON.stringify({
-          name: 'Cache Test App',
-        }),
-      };
-
-      mockPool.get.mockResolvedValueOnce(mockEvent);
-
-      // First call
-      const result1 = await getApplicationProfile(canonicalUrl);
-      expect(result1).not.toBeNull();
-      expect(mockResolveNip05).toHaveBeenCalledTimes(1);
-      expect(mockPool.get).toHaveBeenCalledTimes(1);
-
-      // Second call should use cache (by canonical URL)
-      const result2 = await getApplicationProfile(canonicalUrl);
-      expect(result2).not.toBeNull();
-      expect(mockResolveNip05).toHaveBeenCalledTimes(1); // Still 1
-      expect(mockPool.get).toHaveBeenCalledTimes(1); // Still 1
     });
 
     it('should handle errors gracefully and return fallback profile', async () => {

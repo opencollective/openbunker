@@ -2,20 +2,7 @@
  * NIP-05 Resolution Utilities
  *
  * Resolves application canonical URLs to Nostr pubkeys using NIP-05 protocol.
- * Implements caching to reduce external API calls.
  */
-
-interface Nip05CacheEntry {
-  pubkey: string;
-  expiresAt: number;
-}
-
-// In-memory cache for NIP-05 resolutions
-// Key: canonical URL, Value: cache entry with pubkey and expiration
-const nip05Cache = new Map<string, Nip05CacheEntry>();
-
-// Cache TTL: 1 hour (3600000 ms)
-const CACHE_TTL_MS = 60 * 60 * 1000;
 
 // Timeout for NIP-05 resolution: 3 seconds
 const RESOLUTION_TIMEOUT_MS = 3000;
@@ -30,13 +17,6 @@ export async function resolveNip05(
   canonicalUrl: string
 ): Promise<string | null> {
   try {
-    // Check cache first
-    const cached = nip05Cache.get(canonicalUrl);
-    if (cached && cached.expiresAt > Date.now()) {
-      console.log(`[NIP-05] Cache hit for ${canonicalUrl} -> ${cached.pubkey}`);
-      return cached.pubkey;
-    }
-
     // Parse URL to extract domain and local-part
     let domain: string;
     let localPart: string | null = null;
@@ -119,12 +99,6 @@ export async function resolveNip05(
         throw new Error('Invalid pubkey format in NIP-05 response');
       }
 
-      // Cache the result
-      nip05Cache.set(canonicalUrl, {
-        pubkey,
-        expiresAt: Date.now() + CACHE_TTL_MS,
-      });
-
       return pubkey;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -137,29 +111,4 @@ export async function resolveNip05(
     console.error('Error resolving NIP-05:', error);
     return null;
   }
-}
-
-/**
- * Clears the NIP-05 resolution cache
- */
-export function clearNip05Cache(): void {
-  nip05Cache.clear();
-}
-
-/**
- * Gets cache statistics (for debugging/monitoring)
- */
-export function getNip05CacheStats(): { size: number; entries: number } {
-  // Clean expired entries
-  const now = Date.now();
-  for (const [key, entry] of nip05Cache.entries()) {
-    if (entry.expiresAt <= now) {
-      nip05Cache.delete(key);
-    }
-  }
-
-  return {
-    size: nip05Cache.size,
-    entries: nip05Cache.size,
-  };
 }

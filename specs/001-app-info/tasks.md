@@ -115,7 +115,7 @@
 - [x] T035 Code cleanup and refactoring (review error handling, logging, code organization)
 - [x] T036 Add logging for application profile fetching operations (success/failure, cache hits/misses)
 - [x] T037 Add logging for scope restriction validation operations
-- [ ] T038 Run quickstart.md validation tests to ensure all acceptance scenarios pass
+- [x] T038 Run quickstart.md validation tests to ensure all acceptance scenarios pass
 - [ ] T039 Performance testing: Verify NIP-05 resolution completes within 3 seconds, kind: 0 fetch within 5 seconds
 - [ ] T040 Security review: Verify application identifier validation prevents injection attacks
 
