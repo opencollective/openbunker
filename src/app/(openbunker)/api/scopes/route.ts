@@ -1,8 +1,4 @@
 import { prisma } from '@/lib/db';
-import {
-  normalizeAppIdentifiers,
-  validateAppIdentifier,
-} from '@/lib/nostr/appIdentifier';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { bytesToHex } from '@noble/hashes/utils';
 import { randomBytes } from 'crypto';
@@ -42,23 +38,9 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        key: {
-          select: {
-            npub: true,
-            name: true,
-          },
-        },
-      },
     });
 
-    // Include allowedApplications in response
-    const scopesWithAllowedApps = scopes.map(scope => ({
-      ...scope,
-      allowedApplications: scope.allowedApplications,
-    }));
-
-    return NextResponse.json({ scopes: scopesWithAllowedApps });
+    return NextResponse.json({ scopes });
   } catch (error) {
     console.error('Error fetching scopes:', error);
     return NextResponse.json(
@@ -156,141 +138,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating scope:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { id, name, description, slug, allowedApplications } = body;
-
-    if (!id || !name || !description || !slug) {
-      return NextResponse.json(
-        { error: 'ID, name, description, and slug are required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if the scope exists and belongs to the user
-    const existingScope = await prisma.scopes.findFirst({
-      where: {
-        id: id,
-        owner: user.id,
-      },
-    });
-
-    if (!existingScope) {
-      return NextResponse.json(
-        { error: 'Scope not found or access denied' },
-        { status: 404 }
-      );
-    }
-
-    // Check if slug is already taken by another scope
-    const slugConflict = await prisma.scopes.findFirst({
-      where: {
-        slug: slug,
-        id: { not: id },
-      },
-    });
-
-    if (slugConflict) {
-      return NextResponse.json(
-        { error: 'Scope slug already exists' },
-        { status: 409 }
-      );
-    }
-
-    // Prepare update data
-    const updateData: {
-      name: string;
-      description: string;
-      slug: string;
-      allowedApplications?: string[] | undefined;
-      updatedAt: Date;
-    } = {
-      name: name,
-      description: description,
-      slug: slug,
-      updatedAt: new Date(),
-    };
-
-    // Handle allowedApplications if provided
-    if (allowedApplications !== undefined) {
-      if (
-        allowedApplications === null ||
-        (Array.isArray(allowedApplications) && allowedApplications.length === 0)
-      ) {
-        updateData.allowedApplications = undefined;
-      } else if (Array.isArray(allowedApplications)) {
-        // Validate each identifier
-        const invalidIdentifiers: string[] = [];
-        for (const identifier of allowedApplications) {
-          const validation = validateAppIdentifier(identifier);
-          if (!validation.valid) {
-            invalidIdentifiers.push(identifier);
-          }
-        }
-
-        if (invalidIdentifiers.length > 0) {
-          return NextResponse.json(
-            {
-              error: `Invalid application identifier format: ${invalidIdentifiers.join(', ')}`,
-            },
-            { status: 400 }
-          );
-        }
-
-        // Normalize identifiers (convert npub to hex, remove duplicates)
-        const normalized = normalizeAppIdentifiers(allowedApplications);
-        updateData.allowedApplications = normalized;
-      } else {
-        return NextResponse.json(
-          { error: 'allowedApplications must be an array or null' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Update the scope
-    const updatedScope = await prisma.scopes.update({
-      where: {
-        id: id,
-      },
-      data: updateData,
-      include: {
-        key: true,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      scope: {
-        ...updatedScope,
-        allowedApplications: updatedScope.allowedApplications,
-        key: {
-          npub: updatedScope.key.npub,
-          nsec: updatedScope.key.nsec,
-          name: updatedScope.key.name,
-        },
-      },
-    });
-  } catch (error) {
-    console.error('Error updating scope:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

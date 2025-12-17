@@ -89,7 +89,6 @@ export async function POST(request: NextRequest) {
         relays: [],
         enckey: '',
         profile: undefined,
-        // Should this be encrypted
         ncryptsec: bytesToHex(secretKey),
         localKey: undefined,
       },
@@ -105,11 +104,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const publicKeyInfo = {
+      npub: key.npub,
+      email: key.email,
+      name: key.name,
+      scopeSlug: key.scopeSlug,
+    };
     return NextResponse.json({
       success: true,
       key: {
         ...userKey,
-        key: key,
+        key: publicKeyInfo,
       },
     });
   } catch (error) {

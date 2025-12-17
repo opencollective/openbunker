@@ -28,9 +28,6 @@ export async function GET(
       where: {
         slug: slug,
       },
-      include: {
-        key: true,
-      },
     });
 
     if (!scope) {
@@ -48,12 +45,6 @@ export async function GET(
       allowedApplications: scope.allowedApplications,
       createdAt: scope.createdAt,
       updatedAt: scope.updatedAt,
-      key: {
-        npub: scope.key.npub,
-        // FIXME this sends the key back
-        nsec: scope.key.nsec,
-        name: scope.key.name,
-      },
     };
 
     return NextResponse.json({ scope: scopeWithKey });
@@ -65,7 +56,7 @@ export async function GET(
     );
   }
 }
-// FIXME is this used?
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -160,22 +151,9 @@ export async function PATCH(
         slug: slug,
       },
       data: updateData,
-      include: {
-        key: true,
-      },
     });
 
-    // Return updated scope
-    const scopeWithKey = {
-      ...updatedScope,
-      key: {
-        npub: updatedScope.key.npub,
-        nsec: updatedScope.key.nsec,
-        name: updatedScope.key.name,
-      },
-    };
-
-    return NextResponse.json({ scope: scopeWithKey });
+    return NextResponse.json({ scope: updatedScope });
   } catch (error) {
     console.error('Error updating scope:', error);
     return NextResponse.json(
@@ -207,9 +185,6 @@ export async function DELETE(
       where: {
         slug: slug,
       },
-      include: {
-        key: true,
-      },
     });
 
     if (!scope) {
@@ -222,7 +197,7 @@ export async function DELETE(
     }
 
     // Store the key npub before deleting the scope
-    const keyNpub = scope.key?.npub;
+    const keyNpub = scope.keyNpub;
 
     // Delete the scope first (removes foreign key constraint)
     await prisma.scopes.delete({
@@ -235,22 +210,14 @@ export async function DELETE(
     // Note: Keys may be shared with UserKeys, so deletion might fail
     if (keyNpub) {
       try {
-        // Check if key is used by UserKeys before attempting deletion
-        const userKeyCount = await prisma.userKeys.count({
-          where: { npub: keyNpub },
-        });
-
         // Only delete if not used by UserKeys
-        if (userKeyCount === 0) {
-          await prisma.keys.delete({
-            where: {
-              npub: keyNpub,
-            },
-          });
-        }
+        await prisma.keys.delete({
+          where: {
+            npub: keyNpub,
+          },
+        });
       } catch {
         // Key might be in use elsewhere, ignore error
-        // The key will remain but won't be associated with this scope
       }
     }
 

@@ -59,13 +59,6 @@ export async function POST(
     let parsed: ParsedNostrConnectURI;
     try {
       parsed = parseNostrConnectURI(connectionToken);
-      console.log('NostrConnect API - Parsed token:', {
-        clientPubkey: parsed.clientPubkey ? 'present' : 'missing',
-        secret: parsed.params?.secret ? 'present' : 'missing',
-        relays: parsed.params?.relays
-          ? `present (${parsed.params.relays.length} relays)`
-          : 'missing',
-      });
     } catch (parseError) {
       console.log('NostrConnect API - Token parsing error:', parseError);
       return NextResponse.json(
@@ -125,11 +118,6 @@ export async function POST(
       user.email,
       'npub:',
       npub
-    );
-    console.log(
-      'Sending response to client',
-      parsed.clientPubkey,
-      connectionTokenSecret
     );
 
     return NextResponse.json({

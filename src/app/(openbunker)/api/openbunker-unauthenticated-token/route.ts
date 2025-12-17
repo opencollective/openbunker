@@ -5,7 +5,7 @@ import { NIP46_RELAYS } from '@/lib/nostr/consts';
 import { validateAppAllowed } from '@/lib/scopes/restrictions';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
-import { nip19 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 
 // Helper function to generate 6-digit code
 function generateSixDigitCode(): string {
@@ -26,9 +26,9 @@ async function createOrGetUser(email: string) {
   if (createError) {
     // If user already exists, handle it gracefully
     if (
-      createError.message.includes('already registered') ||
-      createError.message.includes('already exists') ||
-      createError.message.includes('has already been registered')
+      createError.code == 'user_already_exists' ||
+      createError.code == 'email_exists' ||
+      createError.code == 'identity_already_exists'
     ) {
       console.log('User already exists, continuing with existing user...');
 
@@ -98,8 +98,6 @@ export async function POST(request: NextRequest) {
         },
       });
     }
-    console.log('scopeConfig', scopeConfig, scope);
-
     // Create or get user
     const user = await createOrGetUser(email);
     console.log('User created/retrieved:', user.id);
@@ -146,7 +144,6 @@ export async function POST(request: NextRequest) {
       // Create the key if it doesn't exist
       try {
         // Generate a new secret key and derive the npub
-        const { generateSecretKey, getPublicKey } = await import('nostr-tools');
         const secretKey = generateSecretKey();
         const publicKey = getPublicKey(secretKey);
         const npub = nip19.npubEncode(publicKey);
