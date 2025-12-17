@@ -417,6 +417,66 @@ describe('Scopes API', () => {
       }
     });
 
+    it('should not return the scope key (nsec) in the response', async () => {
+      // First create a scope
+      const scopeSlug = `no-key-test-scope-${Date.now()}`;
+      const createRequest = createAuthenticatedRequest(
+        'http://localhost:3000/api/scopes',
+        {
+          method: 'POST',
+          body: {
+            name: 'No Key Test Scope',
+            description: 'A scope for testing key exclusion',
+            slug: scopeSlug,
+          },
+        }
+      );
+
+      // Set request context for POST
+      setRequest(createRequest);
+      const createResponse = await POST(createRequest);
+      expect(createResponse.status).toBe(200);
+
+      // Now get the scope
+      const getRequest = createAuthenticatedRequest(
+        `http://localhost:3000/api/scopes/${scopeSlug}`
+      );
+
+      // Set request context for GET
+      setRequest(getRequest);
+
+      const response = await GET(getRequest, {
+        params: Promise.resolve({ slug: scopeSlug }),
+      });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.scope).toBeDefined();
+      expect(responseData.scope.keyNpub).toBeDefined();
+      // Verify that key or nsec (secret key) is NOT returned
+      expect(responseData.scope.key).toBeUndefined();
+
+      // Cleanup
+      const scope = await prisma.scopes.findUnique({
+        where: { slug: scopeSlug },
+        include: { key: true },
+      });
+      if (scope) {
+        if (scope.key) {
+          try {
+            await prisma.keys.delete({ where: { npub: scope.key.npub } });
+          } catch {
+            // Key might already be deleted or in use elsewhere
+          }
+        }
+        try {
+          await prisma.scopes.delete({ where: { slug: scopeSlug } });
+        } catch {
+          // Scope might already be deleted
+        }
+      }
+    });
+
     it('should return 401 if user is not authenticated', async () => {
       const request = new NextRequest(
         'http://localhost:3000/api/scopes/test-scope'
@@ -550,12 +610,6 @@ describe('Scopes API', () => {
 
       expect(response.status).toBe(404);
       expect(responseData.error).toBe('Scope not found');
-    });
-
-    it('should return 403 if user is not the owner', async () => {
-      // This test would require creating a scope with a different user
-      // For now, we'll skip this as it requires multiple test users
-      // In a real scenario, you'd create a scope with user A and try to delete with user B
     });
   });
 });
