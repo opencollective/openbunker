@@ -371,7 +371,6 @@ export default class Nip46ScopedDaemon {
       });
       if (dbToken) {
         console.log(`Token: ${token} is valid`);
-        console.log(`DB Token: ${dbToken}`);
         const signerNpub = dbToken.npub;
         // The token is used, so we delete it and create a session based on the token
         // delete token

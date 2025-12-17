@@ -106,21 +106,19 @@ export default function ScopesPage() {
     setAppIdentifierError('');
   };
 
-  const handleUpdateScope = async (e: React.FormEvent, scopeId: string) => {
+  const handleUpdateScope = async (e: React.FormEvent, scope: Scope) => {
     e.preventDefault();
     if (!user) return;
 
     try {
-      const response = await fetch('/api/scopes', {
-        method: 'PUT',
+      const response = await fetch(`/api/scopes/${scope.slug}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id: scopeId,
           name: editFormData.name,
           description: editFormData.description,
-          slug: editFormData.slug,
           allowedApplications:
             editFormData.allowedApplications.length === 0
               ? null
@@ -130,9 +128,7 @@ export default function ScopesPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setScopes(
-          scopes.map(scope => (scope.id === scopeId ? data.scope : scope))
-        );
+        setScopes(scopes.map(s => (s.id === scope.id ? data.scope : s)));
         setEditing(null);
         setEditFormData({
           name: '',
@@ -374,7 +370,7 @@ export default function ScopesPage() {
                 {editing === scope.id ? (
                   // Edit Form
                   <form
-                    onSubmit={e => handleUpdateScope(e, scope.id)}
+                    onSubmit={e => handleUpdateScope(e, scope)}
                     className="space-y-4"
                   >
                     <div className="flex justify-between items-center mb-4">
@@ -436,16 +432,13 @@ export default function ScopesPage() {
                       <input
                         type="text"
                         value={editFormData.slug}
-                        onChange={e =>
-                          setEditFormData({
-                            ...editFormData,
-                            slug: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
                         placeholder="my-community-scope"
-                        required
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Slug cannot be changed after creation
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
