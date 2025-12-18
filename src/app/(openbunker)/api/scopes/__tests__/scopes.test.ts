@@ -394,7 +394,7 @@ describe('Scopes API', () => {
       expect(responseData.scope.slug).toBe(scopeSlug);
       expect(responseData.scope.name).toBe('Get Test Scope');
       expect(responseData.scope.description).toBe('A scope for testing GET');
-      expect(responseData.scope.key).toBeDefined();
+      expect(responseData.scope.key).toBeUndefined();
 
       // Cleanup - scope may have already been deleted by DELETE handler
       const scope = await prisma.scopes.findUnique({

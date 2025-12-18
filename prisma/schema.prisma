@@ -63,16 +63,9 @@ model UserKeys {
 
 model Keys {
   npub     String @id
-  nsec     String? // Private key for scope keys
-  nip05    String?
   name     String?
-  avatar   String?
   relays   String[]
-  enckey   String
-  // In Noauth, this is an Augmented Nostr Event with an info field representing the profile
-  profile  Json?
   ncryptsec String?  
-  localKey String?
   email    String?
   scopeSlug String? // Associate keys with specific scopes
 
@@ -81,61 +74,6 @@ model Keys {
   scopes   Scopes[] // Keys can be associated with scopes
   @@index([npub])
   @@index([scopeSlug])
-}
-
-model Apps {
-  appNpub   String
-  npub      String
-  name      String
-  icon      String
-  url       String
-  timestamp BigInt
-  updateTimestamp BigInt
-  permUpdateTimestamp BigInt
-  userAgent String?
-  token String?
-  subNpub String?
-
-  @@id(name: "appId", [appNpub, npub])
-}
-
-model Perms {
-  id        String @id
-  npub      String
-  appNpub   String
-  perm      String
-  value     String
-  timestamp BigInt
-}
-
-model Pending {
-  id        String @id
-  npub      String
-  appNpub   String
-  timestamp BigInt
-  method    String
-  params    String
-  appUrl    String?
-  appName   String?
-  appIcon   String?
-  subNpub   String?
-}
-
-model History {
-  id        String   @id
-  npub      String
-  appNpub   String
-  timestamp BigInt
-  method    String
-  allowed   Boolean?
-  params    String?
-  result    String?
-
-  @@index([npub, appNpub])
-}
-
-model SyncHistory {
-  npub String @id
 }
 
 model ConnectTokens {

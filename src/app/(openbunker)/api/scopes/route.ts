@@ -94,20 +94,13 @@ export async function POST(request: NextRequest) {
     // Generate a unique ID for the scope
     const scopeId = randomBytes(16).toString('hex');
 
-    // Generate nsec for storage
-    const nsec = nip19.nsecEncode(secretKey);
-
     // Create the key in the Keys table first
     const key = await prisma.keys.create({
       data: {
         npub: npub,
-        nsec: nsec, // Store the nsec format
         name: `${name} Scope Key`,
         relays: ['wss://relay.nsec.app'], // Default relay
-        enckey: '', // Empty for scope keys
-        profile: undefined,
         ncryptsec: bytesToHex(secretKey), // Keep hex format for compatibility
-        localKey: undefined,
         scopeSlug: slug, // Associate with the scope
       },
     });

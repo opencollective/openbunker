@@ -1,13 +1,6 @@
 import { prisma } from '@/lib/db';
 import { NDKEvent, NDKPrivateKeySigner, NIP46Method } from '@nostr-dev-kit/ndk';
-import { Keys } from '@prisma/client';
-import {
-  generateSecretKey,
-  getPublicKey,
-  nip19,
-  NostrEvent,
-  SimplePool,
-} from 'nostr-tools';
+import { NostrEvent, SimplePool, nip19 } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 import { hexToBytes } from 'nostr-tools/utils';
 import { decrypt, encrypt } from './encryptUtils';
@@ -289,42 +282,6 @@ export default class Nip46ScopedDaemon {
       );
       return null;
     }
-  }
-
-  private async getOrCreateKeyFromEmail(
-    email: string,
-    scope: string | null
-  ): Promise<Keys | null> {
-    const existingKey = await prisma.keys.findFirst({
-      where: {
-        email: email,
-        scopeSlug: scope,
-      },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let keyToReturn: any = existingKey;
-    if (!existingKey) {
-      // Generate a new Nostr key pair for the new user
-      const secretKey = generateSecretKey();
-      const publicKey = getPublicKey(secretKey);
-      const npub = nip19.npubEncode(publicKey);
-      // Create the key in the database
-      const newKey = await prisma.keys.create({
-        data: {
-          npub: npub,
-          name: email,
-          email: email,
-          relays: [],
-          enckey: '',
-          profile: { name: email },
-          ncryptsec: Buffer.from(secretKey).toString('hex'),
-          scopeSlug: scope,
-        },
-      });
-      keyToReturn = newKey;
-    }
-    return keyToReturn;
   }
 
   private async validateAndGetUserSession(

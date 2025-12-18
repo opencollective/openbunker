@@ -87,10 +87,7 @@ export async function POST(request: NextRequest) {
         email: user.email || '',
         scopeSlug: scope,
         relays: [],
-        enckey: '',
-        profile: undefined,
         ncryptsec: bytesToHex(secretKey),
-        localKey: undefined,
       },
     });
 

@@ -6,6 +6,7 @@ import { validateAppAllowed } from '@/lib/scopes/restrictions';
 import { createSupabaseAdminClient } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { bytesToHex } from 'nostr-tools/utils';
 
 // Helper function to generate 6-digit code
 function generateSixDigitCode(): string {
@@ -147,20 +148,14 @@ export async function POST(request: NextRequest) {
         const secretKey = generateSecretKey();
         const publicKey = getPublicKey(secretKey);
         const npub = nip19.npubEncode(publicKey);
-        const nsec = nip19.nsecEncode(secretKey);
-
-        // Convert secret key to hex for enckey
-        const enckeyHex = Buffer.from(secretKey).toString('hex');
 
         keyRecord = await prisma.keys.create({
           data: {
             npub: npub,
-            nsec: nsec,
             name: `${email} - ${scopeConfig.name}`,
             email: email,
             scopeSlug: scope,
-            enckey: enckeyHex,
-            ncryptsec: enckeyHex,
+            ncryptsec: bytesToHex(secretKey),
             relays: [],
           },
         });
