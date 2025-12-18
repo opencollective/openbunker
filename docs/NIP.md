@@ -6,7 +6,6 @@ This document describes all Nostr protocol implementations, NIPs (Nostr Implemen
 
 - [NIP-05 Resolution](#nip-05-resolution)
 - [Kind: 0 Event Fetching](#kind-0-event-fetching)
-- [Application Profile Caching](#application-profile-caching)
 - [Scope-Level Application Restrictions](#scope-level-application-restrictions)
 
 ---
@@ -34,7 +33,6 @@ Resolves application canonical URLs to Nostr pubkeys using the NIP-05 protocol. 
 3. Fetch JSON response with timeout (3 seconds)
 4. Extract pubkey from response `names` mapping
 5. Validate pubkey format (64-character hex string)
-6. Cache result with 1-hour TTL
 
 **Output**: Resolved pubkey in hex format, or `null` if resolution fails
 
@@ -45,13 +43,6 @@ Resolves application canonical URLs to Nostr pubkeys using the NIP-05 protocol. 
 - Invalid JSON response
 - Missing or invalid pubkey format
 - All errors are logged but don't throw exceptions
-
-**Caching**:
-
-- In-memory Map-based cache
-- Key: canonical URL
-- TTL: 1 hour (3600000 ms)
-- Cache statistics available via `getNip05CacheStats()`
 
 ### Usage Example
 
@@ -69,8 +60,6 @@ if (pubkey) {
 ### Notes
 
 - Supports both URL format (`https://app.example.com`) and email format (`app@example.com`)
-- Cache is in-memory only (consider Redis for production scale)
-- In serverless deployments, cache may not persist across invocations
 
 ---
 
@@ -95,15 +84,13 @@ Fetches application profile information (name, icon, description) from Nostr rel
 
 **Process**:
 
-1. Check in-memory cache first
-2. Create SimplePool from nostr-tools
-3. Query relays with filter: `{ kinds: [0], authors: [pubkey] }`
-4. Get most recent kind: 0 event (highest `created_at`)
-5. Parse event content as JSON to extract:
+1. Create SimplePool from nostr-tools
+2. Query relays with filter: `{ kinds: [0], authors: [pubkey] }`
+3. Get most recent kind: 0 event (highest `created_at`)
+4. Parse event content as JSON to extract:
    - `name`: Application name
    - `picture` or `avatar`: Application icon URL
    - `about` or `description`: Application description
-6. Cache result with 30-minute TTL
 
 **Output**: `AppProfile` object with `pubkey`, `name`, `icon`, `description`, `fetchedAt`, or `null` if fetch fails
 
@@ -115,13 +102,6 @@ Fetches application profile information (name, icon, description) from Nostr rel
 - Invalid JSON in event content
 - All errors are logged but return `null`
 
-**Caching**:
-
-- In-memory Map-based cache
-- Key: pubkey (hex) or canonical URL
-- TTL: 30 minutes (1800000 ms)
-- Cache statistics available via `getAppProfileCacheStats()`
-
 #### Function: `getApplicationProfile(canonicalUrl: string, relays?: string[]): Promise<AppProfile | null>`
 
 **Purpose**: Combines NIP-05 resolution and kind: 0 fetching into a single operation.
@@ -132,7 +112,6 @@ Fetches application profile information (name, icon, description) from Nostr rel
 2. If resolution fails, return fallback profile with URL as name
 3. Fetch kind: 0 event from relays
 4. If fetch fails, return fallback profile with pubkey
-5. Cache by both pubkey and canonical URL
 
 **Fallback Behavior**:
 
@@ -155,57 +134,7 @@ console.log('App description:', profile.description);
 
 - Default relays are public Nostr relays
 - Profile fetching is non-blocking for email sending
-- Cache is in-memory only (consider Redis for production scale)
-- In serverless deployments, cache may not persist across invocations
-
----
-
-## Application Profile Caching
-
-**Implementation Date**: 2025-01-27  
-**Locations**:
-
-- `src/utils/nip05Utils.ts` (NIP-05 resolution cache)
-- `src/lib/nostr/appProfile.ts` (Application profile cache)
-
-### Purpose
-
-Reduces external API calls and relay queries by caching resolved NIP-05 mappings and fetched application profiles in memory.
-
-### Cache Configuration
-
-#### NIP-05 Resolution Cache
-
-- **Storage**: `Map<string, Nip05CacheEntry>`
-- **Key**: Canonical URL
-- **Value**: `{ pubkey: string, expiresAt: number }`
-- **TTL**: 1 hour (3600000 ms)
-
-#### Application Profile Cache
-
-- **Storage**: `Map<string, ProfileCacheEntry>`
-- **Key**: Pubkey (hex) or canonical URL
-- **Value**: `{ profile: AppProfile, expiresAt: number }`
-- **TTL**: 30 minutes (1800000 ms)
-
-### Cache Management
-
-- **Automatic Expiration**: Entries expire based on `expiresAt` timestamp
-- **Manual Clearing**: `clearNip05Cache()` and `clearAppProfileCache()` functions available
-- **Statistics**: `getNip05CacheStats()` and `getAppProfileCacheStats()` for monitoring
-
-### Limitations
-
-- **In-Memory Only**: Cache is not shared across processes
-- **Serverless**: In serverless deployments (e.g., Vercel), cache may not persist across invocations
-- **Production Scale**: Consider Redis or similar distributed cache for production use
-
-### Future Enhancements
-
-- Redis-based distributed caching for multi-instance deployments
-- Configurable TTL per cache type
-- Cache warming strategies
-- Cache invalidation webhooks
+- No caching is implemented; each request performs fresh resolution and fetching
 
 ---
 
