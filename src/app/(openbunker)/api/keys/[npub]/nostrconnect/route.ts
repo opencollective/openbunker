@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/db';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
 import {
   ParsedNostrConnectURI,
   parseNostrConnectURI,
-} from '@/utils/nip46Utils';
+} from '@/lib/nostr/nip46Utils';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { hexToBytes } from '@noble/hashes/utils';
 import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
 import { NextRequest, NextResponse } from 'next/server';
@@ -59,13 +59,6 @@ export async function POST(
     let parsed: ParsedNostrConnectURI;
     try {
       parsed = parseNostrConnectURI(connectionToken);
-      console.log('NostrConnect API - Parsed token:', {
-        clientPubkey: parsed.clientPubkey ? 'present' : 'missing',
-        secret: parsed.params?.secret ? 'present' : 'missing',
-        relays: parsed.params?.relays
-          ? `present (${parsed.params.relays.length} relays)`
-          : 'missing',
-      });
     } catch (parseError) {
       console.log('NostrConnect API - Token parsing error:', parseError);
       return NextResponse.json(
@@ -125,11 +118,6 @@ export async function POST(
       user.email,
       'npub:',
       npub
-    );
-    console.log(
-      'Sending response to client',
-      parsed.clientPubkey,
-      connectionTokenSecret
     );
 
     return NextResponse.json({

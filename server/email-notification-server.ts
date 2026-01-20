@@ -5,7 +5,7 @@ import WebSocket from 'ws';
 import { Keys, PrismaClient } from '@prisma/client';
 import { nip19, SimplePool, type Event, type Filter } from 'nostr-tools';
 import { CreateEmailOptions, Resend } from 'resend';
-import { getCommunityATagFromEnv } from '../src/utils/communityUtils';
+import { getCommunityATagFromEnv } from '../src/lib/nostr/communityUtils';
 
 // Database connection
 const prisma = new PrismaClient();

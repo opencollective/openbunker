@@ -5,7 +5,13 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Define routes that are public (don't require authentication)
-  const publicRoutes = ['/login', '/example', '/api', '/_next', '/favicon.ico'];
+  const publicRoutes = [
+    '/login',
+    '/example',
+    '/api/openbunker-unauthenticated-token',
+    '/_next',
+    '/favicon.ico',
+  ];
   const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
 
   // Allow public routes to proceed
@@ -15,7 +21,7 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request,
   });
 
@@ -28,12 +34,6 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );

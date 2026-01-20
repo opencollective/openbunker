@@ -13,6 +13,7 @@ interface Scope {
   keyNpub: string;
   createdAt: string;
   updatedAt: string;
+  allowedApplications?: string[] | null;
   key?: {
     npub: string;
     name: string;
@@ -35,7 +36,10 @@ export default function ScopesPage() {
     name: '',
     description: '',
     slug: '',
+    allowedApplications: [] as string[],
   });
+  const [newAppIdentifier, setNewAppIdentifier] = useState('');
+  const [appIdentifierError, setAppIdentifierError] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,32 +100,44 @@ export default function ScopesPage() {
       name: scope.name,
       description: scope.description,
       slug: scope.slug,
+      allowedApplications: scope.allowedApplications || [],
     });
+    setNewAppIdentifier('');
+    setAppIdentifierError('');
   };
 
-  const handleUpdateScope = async (e: React.FormEvent, scopeId: string) => {
+  const handleUpdateScope = async (e: React.FormEvent, scope: Scope) => {
     e.preventDefault();
     if (!user) return;
 
     try {
-      const response = await fetch('/api/scopes', {
-        method: 'PUT',
+      const response = await fetch(`/api/scopes/${scope.slug}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id: scopeId,
-          ...editFormData,
+          name: editFormData.name,
+          description: editFormData.description,
+          allowedApplications:
+            editFormData.allowedApplications.length === 0
+              ? null
+              : editFormData.allowedApplications,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        setScopes(
-          scopes.map(scope => (scope.id === scopeId ? data.scope : scope))
-        );
+        setScopes(scopes.map(s => (s.id === scope.id ? data.scope : s)));
         setEditing(null);
-        setEditFormData({ name: '', description: '', slug: '' });
+        setEditFormData({
+          name: '',
+          description: '',
+          slug: '',
+          allowedApplications: [],
+        });
+        setNewAppIdentifier('');
+        setAppIdentifierError('');
         alert('Scope updated successfully!');
       } else {
         const error = await response.json();
@@ -135,7 +151,60 @@ export default function ScopesPage() {
 
   const handleCancelEdit = () => {
     setEditing(null);
-    setEditFormData({ name: '', description: '', slug: '' });
+    setEditFormData({
+      name: '',
+      description: '',
+      slug: '',
+      allowedApplications: [],
+    });
+    setNewAppIdentifier('');
+    setAppIdentifierError('');
+  };
+
+  const handleAddAppIdentifier = () => {
+    if (!newAppIdentifier.trim()) {
+      setAppIdentifierError('Please enter an application identifier');
+      return;
+    }
+
+    // Basic validation: check if it's a URL or looks like a pubkey/npub
+    const isUrl =
+      newAppIdentifier.startsWith('http://') ||
+      newAppIdentifier.startsWith('https://');
+    const isNpub = newAppIdentifier.startsWith('npub1');
+    const isHex = /^[0-9a-f]{64}$/i.test(newAppIdentifier);
+
+    if (!isUrl && !isNpub && !isHex) {
+      setAppIdentifierError(
+        'Invalid format. Must be a URL, npub, or hex pubkey (64 chars)'
+      );
+      return;
+    }
+
+    // Check for duplicates
+    if (editFormData.allowedApplications.includes(newAppIdentifier.trim())) {
+      setAppIdentifierError('This application is already in the list');
+      return;
+    }
+
+    setEditFormData({
+      ...editFormData,
+      allowedApplications: [
+        ...editFormData.allowedApplications,
+        newAppIdentifier.trim(),
+      ],
+    });
+    setNewAppIdentifier('');
+    setAppIdentifierError('');
+  };
+
+  const handleRemoveAppIdentifier = (index: number) => {
+    setEditFormData({
+      ...editFormData,
+      allowedApplications: editFormData.allowedApplications.filter(
+        (_, i) => i !== index
+      ),
+    });
   };
 
   const handleCancelCreate = () => {
@@ -301,7 +370,7 @@ export default function ScopesPage() {
                 {editing === scope.id ? (
                   // Edit Form
                   <form
-                    onSubmit={e => handleUpdateScope(e, scope.id)}
+                    onSubmit={e => handleUpdateScope(e, scope)}
                     className="space-y-4"
                   >
                     <div className="flex justify-between items-center mb-4">
@@ -363,16 +432,79 @@ export default function ScopesPage() {
                       <input
                         type="text"
                         value={editFormData.slug}
-                        onChange={e =>
-                          setEditFormData({
-                            ...editFormData,
-                            slug: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
                         placeholder="my-community-scope"
-                        required
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Slug cannot be changed after creation
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Allowed Applications
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Restrict which applications can request connections.
+                        Leave empty to allow all applications.
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newAppIdentifier}
+                            onChange={e => {
+                              setNewAppIdentifier(e.target.value);
+                              setAppIdentifierError('');
+                            }}
+                            onKeyPress={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddAppIdentifier();
+                              }
+                            }}
+                            placeholder="https://app.example.com or npub1..."
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddAppIdentifier}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                          >
+                            Add
+                          </button>
+                        </div>
+                        {appIdentifierError && (
+                          <p className="text-sm text-red-600">
+                            {appIdentifierError}
+                          </p>
+                        )}
+                        {editFormData.allowedApplications.length > 0 && (
+                          <div className="space-y-1">
+                            {editFormData.allowedApplications.map(
+                              (app, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md"
+                                >
+                                  <span className="text-sm text-gray-800 font-mono">
+                                    {app}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveAppIdentifier(index)
+                                    }
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </form>
                 ) : (
@@ -394,6 +526,35 @@ export default function ScopesPage() {
                         <p className="text-gray-600 text-sm mb-3">
                           {scope.description}
                         </p>
+
+                        {/* Allowed Applications Display */}
+                        {scope.allowedApplications &&
+                        scope.allowedApplications.length > 0 ? (
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500 mb-1">
+                              Allowed Applications (
+                              {scope.allowedApplications.length})
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {scope.allowedApplications.map((app, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-mono"
+                                >
+                                  {app.length > 30
+                                    ? `${app.substring(0, 27)}...`
+                                    : app}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500">
+                              All applications allowed
+                            </p>
+                          </div>
+                        )}
 
                         {/* Compact Key Display */}
                         {scope.key && (

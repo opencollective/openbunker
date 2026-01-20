@@ -15,6 +15,7 @@ interface VerificationResponse {
 export default function EmailLogin() {
   const [email, setEmail] = useState('');
   const [scope, setScope] = useState('community-requests');
+  const [appUrl, setAppUrl] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export default function EmailLogin() {
         body: JSON.stringify({
           email,
           scope,
+          ...(appUrl && { appUrl }),
         }),
       });
 
@@ -90,6 +92,7 @@ export default function EmailLogin() {
   const resetForm = () => {
     setEmail('');
     setScope('community-requests');
+    setAppUrl('');
     setVerificationCode('');
     setStep('request');
     setMessage('');
@@ -143,6 +146,28 @@ export default function EmailLogin() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 bg-white"
               placeholder="Enter scope (e.g., community-requests)"
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="appUrl"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              App URL{' '}
+              <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              type="url"
+              id="appUrl"
+              value={appUrl}
+              onChange={e => setAppUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 bg-white"
+              placeholder="https://example.com/app"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Optional: Provide the application URL to display app information
+              in the verification email
+            </p>
           </div>
 
           <button

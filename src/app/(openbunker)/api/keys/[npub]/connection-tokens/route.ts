@@ -59,7 +59,7 @@ export async function GET(
     });
 
     // If the key belongs to a scope, get the scope's keyNpub
-    let scopeKeyNpub = null;
+    let scopeKeyNpub: string | null = null;
     if (keyInfo?.scopeSlug) {
       const scope = await prisma.scopes.findUnique({
         where: {
