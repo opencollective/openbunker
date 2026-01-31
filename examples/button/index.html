@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>OpenBunker - Button Example</title>
+    <script type="module">
+      // Import nostr-tools at the top for better performance
+      import * as NostrTools from 'https://esm.sh/nostr-tools@2.19.3';
+      window.NostrTools = NostrTools;
+    </script>
+  </head>
+
+  <body>
+    <div class="card">
+      <!-- Login View -->
+      <div id="login-view">
+        <h1>Button Example</h1>
+
+        <label for="email">Email (optional)</label>
+
+        <input type="email" id="email" placeholder="you@example.com" />
+
+        <p class="hint">Pre-fill your email for faster signup</p>
+
+        <button class="btn btn-primary" id="login-btn">
+          Login with OpenBunker
+        </button>
+
+        <div class="status">Status: <span id="status">disconnected</span></div>
+      </div>
+
+      <!-- Success View -->
+      <div id="success-view" class="hidden">
+        <div class="success">
+          <div class="success-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+
+          <h1>Authenticated!</h1>
+
+          <p class="npub" id="npub"></p>
+
+          <button class="btn btn-danger" id="logout-btn">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      // ============================================================
+      // CONFIGURATION - Set these values for your OpenBunker instance
+      // ============================================================
+      const CONFIG = {
+        OPENBUNKER_ORIGIN: 'https://openbunker.opencollective.xyz',
+        OPENBUNKER_POPUP_URL:
+          'https://openbunker.opencollective.xyz/openbunker-login-popup',
+      };
+
+      // ============================================================
+      // STATE
+      // ============================================================
+      let state = {
+        status: 'disconnected', // disconnected | connecting | connected
+        npub: null,
+        popup: null,
+      };
+
+      // ============================================================
+      // DOM ELEMENTS
+      // ============================================================
+      const loginView = document.getElementById('login-view'),
+        successView = document.getElementById('success-view'),
+        emailInput = document.getElementById('email'),
+        loginBtn = document.getElementById('login-btn'),
+        logoutBtn = document.getElementById('logout-btn'),
+        statusEl = document.getElementById('status'),
+        npubEl = document.getElementById('npub');
+
+      // ============================================================
+      // FUNCTIONS
+      // ============================================================
+      function updateUI() {
+        statusEl.textContent = state.status;
+
+        if (state.status === 'connected') {
+          loginView.classList.add('hidden');
+          successView.classList.remove('hidden');
+
+          npubEl.textContent = state.npub;
+        } else {
+          loginView.classList.remove('hidden');
+          successView.classList.add('hidden');
+        }
+
+        loginBtn.textContent =
+          state.status === 'connecting'
+            ? 'Connecting...'
+            : 'Login with OpenBunker';
+
+        loginBtn.disabled = state.status === 'connecting';
+      }
+
+      function openPopup() {
+        state.status = 'connecting';
+
+        updateUI();
+
+        const email = emailInput.value,
+          url = new URL(CONFIG.OPENBUNKER_POPUP_URL);
+
+        if (email) {
+          url.searchParams.set('email', email);
+        }
+
+        // Open popup
+        state.popup = window.open(
+          url.toString(),
+          'openbunker-login',
+          'width=500,height=600,scrollbars=yes,resizable=yes'
+        );
+
+        // Check if popup closed
+        const checkClosed = setInterval(() => {
+          if (state.popup && state.popup.closed) {
+            clearInterval(checkClosed);
+
+            state.popup = null;
+
+            if (state.status === 'connecting') {
+              state.status = 'disconnected';
+
+              updateUI();
+            }
+          }
+        }, 1000);
+      }
+
+      function handleAuthSuccess(event) {
+        // Verify origin matches your OpenBunker instance
+        if (event.origin !== CONFIG.OPENBUNKER_ORIGIN) return;
+
+        if (event.data && event.data.type === 'openbunker-auth-success') {
+          console.log('Auth success:', event.data);
+
+          // Close popup if still open
+          if (state.popup) {
+            state.popup.close();
+            state.popup = null;
+          }
+
+          // Extract npub from the bunker URL
+          if (event.data.connectionMode === 'bunker' && event.data.secretKey) {
+            try {
+              // Parse the bunker URL (format: bunker://<pubkey>?relay=...&secret=...)
+              const bunkerUrl = event.data.secretKey;
+              const match = bunkerUrl.match(/^bunker:\/\/([0-9a-f]{64})/);
+
+              if (match && match[1]) {
+                // Convert hex pubkey to npub using nostr-tools
+                state.npub = NostrTools.nip19.npubEncode(match[1]);
+                state.status = 'connected';
+              } else {
+                console.error('Invalid bunker URL format:', bunkerUrl);
+                state.status = 'disconnected';
+                return;
+              }
+            } catch (error) {
+              console.error('Failed to parse bunker URL:', error);
+              state.status = 'disconnected';
+              return;
+            }
+          } else if (event.data.npub) {
+            state.npub = event.data.npub;
+            state.status = 'connected';
+          } else {
+            console.error('No valid authentication data received');
+            state.status = 'disconnected';
+            return;
+          }
+
+          updateUI();
+        }
+      }
+
+      function logout() {
+        state.status = 'disconnected';
+        state.npub = null;
+
+        updateUI();
+      }
+
+      // ============================================================
+      // EVENT LISTENERS
+      // ============================================================
+      loginBtn.addEventListener('click', openPopup);
+      logoutBtn.addEventListener('click', logout);
+
+      window.addEventListener('message', handleAuthSuccess);
+
+      // Initial render
+      updateUI();
+    </script>
+  </body>
+</html>

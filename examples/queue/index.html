@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>OpenBunker - Queue Example</title>
+  </head>
+
+  <body>
+    <div class="card">
+      <h1>Queue Example</h1>
+
+      <p class="subtitle">6-digit code flow with event submission</p>
+
+      <!-- Step 1: Email Input -->
+      <div id="email-step">
+        <label for="email">Email Address</label>
+
+        <input type="email" id="email" placeholder="you@example.com" required />
+
+        <label for="scope">Scope</label>
+
+        <input
+          type="text"
+          id="scope"
+          value="community-requests"
+          placeholder="community-requests"
+        />
+
+        <button class="btn btn-primary" id="send-code-btn">
+          Send Verification Code
+        </button>
+      </div>
+
+      <!-- Step 2: Code Input -->
+      <div id="code-step" class="hidden">
+        <p class="code-hint">
+          Enter the 6-digit code sent to
+          <strong id="email-display"></strong>
+        </p>
+
+        <div class="code-container">
+          <input
+            type="text"
+            class="code-input"
+            maxlength="1"
+            inputmode="numeric"
+            data-index="0"
+          />
+          <input
+            type="text"
+            class="code-input"
+            maxlength="1"
+            inputmode="numeric"
+            data-index="1"
+          />
+          <input
+            type="text"
+            class="code-input"
+            maxlength="1"
+            inputmode="numeric"
+            data-index="2"
+          />
+          <input
+            type="text"
+            class="code-input"
+            maxlength="1"
+            inputmode="numeric"
+            data-index="3"
+          />
+          <input
+            type="text"
+            class="code-input"
+            maxlength="1"
+            inputmode="numeric"
+            data-index="4"
+          />
+          <input
+            type="text"
+            class="code-input"
+            maxlength="1"
+            inputmode="numeric"
+            data-index="5"
+          />
+        </div>
+
+        <button class="btn btn-primary" id="verify-btn" disabled>
+          Verify & Submit Event
+        </button>
+
+        <button class="btn btn-link" id="back-btn">← Back to email</button>
+      </div>
+
+      <!-- Step 3: Success -->
+      <div id="success-step" class="hidden">
+        <div class="success">
+          <div class="success-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+
+          <h1>Authenticated!</h1>
+
+          <p class="npub" id="npub"></p>
+
+          <div class="event-box">
+            <p>Event Submitted:</p>
+            <code id="event-id"></code>
+          </div>
+
+          <button class="btn btn-danger" id="logout-btn">Logout</button>
+        </div>
+      </div>
+
+      <!-- Error Display -->
+      <div id="error" class="error hidden"></div>
+
+      <!-- Status -->
+      <div class="status">Status: <span id="status">disconnected</span></div>
+    </div>
+
+    <script type="module">
+      import * as NostrTools from 'https://esm.sh/nostr-tools@2.19.3';
+      import {
+        BunkerSigner,
+        parseBunkerInput,
+      } from 'https://esm.sh/nostr-tools@2.19.3/nip46';
+
+      // ============================================================
+      // CONFIGURATION - Set these values for your OpenBunker instance
+      // ============================================================
+      const CONFIG = {
+        OPENBUNKER_ORIGIN: 'https://openbunker.opencollective.xyz',
+        OPENBUNKER_API_URL:
+          'https://openbunker.opencollective.xyz/api/openbunker-unauthenticated-token',
+      };
+
+      // ============================================================
+      // STATE
+      // ============================================================
+      let state = {
+        step: 'email', // email | code | success
+        status: 'disconnected',
+        email: '',
+        bunkerToken: null,
+        npub: null,
+        eventId: null,
+        loading: false,
+        error: null,
+      };
+
+      // ============================================================
+      // DOM ELEMENTS
+      // ============================================================
+      const emailStep = document.getElementById('email-step'),
+        codeStep = document.getElementById('code-step'),
+        successStep = document.getElementById('success-step'),
+        emailInput = document.getElementById('email'),
+        scopeInput = document.getElementById('scope'),
+        emailDisplay = document.getElementById('email-display'),
+        codeInputs = document.querySelectorAll('.code-input'),
+        sendCodeBtn = document.getElementById('send-code-btn'),
+        verifyBtn = document.getElementById('verify-btn'),
+        backBtn = document.getElementById('back-btn'),
+        logoutBtn = document.getElementById('logout-btn'),
+        statusEl = document.getElementById('status'),
+        npubEl = document.getElementById('npub'),
+        eventIdEl = document.getElementById('event-id'),
+        errorEl = document.getElementById('error');
+
+      // ============================================================
+      // FUNCTIONS
+      // ============================================================
+      function showError(message) {
+        state.error = message;
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+      }
+
+      function clearError() {
+        state.error = null;
+        errorEl.classList.add('hidden');
+      }
+
+      function updateUI() {
+        statusEl.textContent = state.status;
+
+        clearError();
+
+        // Show/hide steps
+        emailStep.classList.toggle('hidden', state.step !== 'email');
+        codeStep.classList.toggle('hidden', state.step !== 'code');
+        successStep.classList.toggle('hidden', state.step !== 'success');
+
+        // Update button states
+        sendCodeBtn.textContent = state.loading
+          ? 'Sending...'
+          : 'Send Verification Code';
+
+        sendCodeBtn.disabled = state.loading;
+
+        verifyBtn.textContent = state.loading
+          ? 'Verifying...'
+          : 'Verify & Submit Event';
+
+        if (state.step === 'code') {
+          emailDisplay.textContent = state.email;
+        }
+
+        if (state.step === 'success') {
+          npubEl.textContent = state.npub;
+          eventIdEl.textContent = state.eventId;
+        }
+      }
+
+      function getCode() {
+        return Array.from(codeInputs)
+          .map(input => input.value)
+          .join('');
+      }
+
+      function updateVerifyButton() {
+        const code = getCode();
+
+        verifyBtn.disabled = code.length !== 6 || state.loading;
+      }
+
+      async function requestCode() {
+        const email = emailInput.value.trim(),
+          scope = scopeInput.value.trim();
+
+        if (!email) {
+          showError('Please enter your email address');
+          return;
+        }
+
+        state.loading = true;
+        state.email = email;
+
+        updateUI();
+
+        try {
+          const response = await fetch(CONFIG.OPENBUNKER_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, scope }),
+          });
+
+          const data = await response.json();
+
+          if (data.success && data.bunkerConnectionToken) {
+            state.bunkerToken = data.bunkerConnectionToken;
+            state.step = 'code';
+            state.loading = false;
+
+            updateUI();
+
+            // Focus first code input
+            codeInputs[0].focus();
+          } else {
+            throw new Error(data.error || 'Failed to send verification code');
+          }
+        } catch (err) {
+          state.loading = false;
+
+          updateUI();
+
+          showError(err.message);
+        }
+      }
+
+      async function verifyCode() {
+        const code = getCode();
+
+        if (code.length !== 6) {
+          showError('Please enter all 6 digits');
+          return;
+        }
+
+        state.loading = true;
+        state.status = 'connecting';
+
+        updateUI();
+
+        try {
+          console.log('Attempting to verify code...');
+
+          // Add the 6-digit code as the secret parameter
+          const url = new URL(state.bunkerToken);
+          url.searchParams.set('secret', code);
+
+          const localPrivKey = NostrTools.generateSecretKey(),
+            bunkerPointer = await parseBunkerInput(url.toString());
+
+          if (!bunkerPointer) {
+            throw new Error('Invalid bunker URL format');
+          }
+
+          // Create BunkerSigner with fallback popup auth if code is wrong
+          const signer = await BunkerSigner.fromBunker(
+            localPrivKey,
+            bunkerPointer,
+            {
+              onauth: async authUrl => {
+                console.log(
+                  'Code was incorrect, opening popup authentication...'
+                );
+                // Wrong code - fallback to popup authentication
+                await handlePopupAuth(authUrl);
+                throw new Error('POPUP_AUTH_COMPLETE');
+              },
+            }
+          );
+
+          try {
+            await signer.connect();
+            await completeAuthWithSigner(signer);
+          } catch (connectErr) {
+            if (connectErr.message === 'POPUP_AUTH_COMPLETE') return;
+
+            throw connectErr;
+          }
+        } catch (err) {
+          state.loading = false;
+          state.status = 'disconnected';
+
+          updateUI();
+
+          showError(err.message);
+        }
+      }
+
+      async function handlePopupAuth(authUrl) {
+        return new Promise((resolve, reject) => {
+          const authPopup = window.open(
+            authUrl,
+            'bunkerAuth',
+            'width=500,height=600,scrollbars=yes,resizable=yes'
+          );
+
+          const messageHandler = async event => {
+            if (event.origin !== CONFIG.OPENBUNKER_ORIGIN) return;
+
+            if (event.data?.type === 'openbunker-auth-success') {
+              console.log('Auth success:', event.data);
+              cleanup();
+              authPopup?.close();
+
+              if (event.data.secretKey) {
+                try {
+                  const localPrivKey = NostrTools.generateSecretKey(),
+                    bunkerPointer = await parseBunkerInput(
+                      event.data.secretKey
+                    ),
+                    signer = await BunkerSigner.fromBunker(
+                      localPrivKey,
+                      bunkerPointer
+                    );
+
+                  await signer.connect();
+
+                  await completeAuthWithSigner(signer);
+
+                  resolve();
+                } catch (err) {
+                  showError(err.message || 'Failed to connect');
+
+                  state.status = 'disconnected';
+                  state.loading = false;
+
+                  updateUI();
+
+                  reject(err);
+                }
+              } else {
+                console.error('No bunker URL in auth response');
+                showError('No bunker URL in auth response');
+
+                state.status = 'disconnected';
+                state.loading = false;
+
+                updateUI();
+
+                reject(new Error('No bunker URL'));
+              }
+            }
+          };
+
+          window.addEventListener('message', messageHandler);
+
+          const checkInterval = setInterval(() => {
+            if (authPopup?.closed) {
+              cleanup();
+
+              showError('Authentication cancelled');
+
+              state.status = 'disconnected';
+              state.loading = false;
+
+              updateUI();
+
+              reject(new Error('Popup closed'));
+            }
+          }, 500);
+
+          const timeoutId = setTimeout(() => {
+            cleanup();
+            if (authPopup && !authPopup.closed) {
+              authPopup.close();
+            }
+            showError('Authentication timeout');
+            state.status = 'disconnected';
+            state.loading = false;
+            updateUI();
+            reject(new Error('Timeout'));
+          }, 120000);
+
+          const cleanup = () => {
+            window.removeEventListener('message', messageHandler);
+            clearInterval(checkInterval);
+            clearTimeout(timeoutId);
+          };
+        });
+      }
+
+      async function completeAuthWithSigner(signer) {
+        const pubkey = await signer.getPublicKey();
+        console.log('Got public key:', pubkey);
+
+        // Create and sign a test event
+        const event = {
+          kind: 1,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          content: 'Hello from OpenBunker Queue Example!',
+        };
+
+        const signedEvent = await signer.signEvent(event);
+
+        state.status = 'connected';
+        state.npub = NostrTools.nip19.npubEncode(pubkey);
+        state.eventId = signedEvent.id;
+        state.step = 'success';
+        state.loading = false;
+
+        updateUI();
+      }
+
+      function goBack() {
+        state.step = 'email';
+
+        codeInputs.forEach(input => (input.value = ''));
+
+        updateUI();
+      }
+
+      function logout() {
+        state = {
+          step: 'email',
+          status: 'disconnected',
+          email: '',
+          bunkerToken: null,
+          npub: null,
+          eventId: null,
+          loading: false,
+          error: null,
+        };
+
+        codeInputs.forEach(input => (input.value = ''));
+        emailInput.value = '';
+
+        updateUI();
+      }
+
+      // ============================================================
+      // EVENT LISTENERS
+      // ============================================================
+      sendCodeBtn.addEventListener('click', requestCode);
+      verifyBtn.addEventListener('click', verifyCode);
+      backBtn.addEventListener('click', goBack);
+      logoutBtn.addEventListener('click', logout);
+
+      emailInput.addEventListener('keypress', e => {
+        if (e.key === 'Enter') requestCode();
+      });
+
+      // Code input handling
+      codeInputs.forEach((input, index) => {
+        input.addEventListener('input', e => {
+          const value = e.target.value;
+          if (!/^\d*$/.test(value)) {
+            e.target.value = '';
+            return;
+          }
+          if (value && index < 5) codeInputs[index + 1].focus();
+          updateVerifyButton();
+        });
+
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Backspace' && !input.value && index > 0) {
+            codeInputs[index - 1].focus();
+          }
+
+          if (e.key === 'Enter' && getCode().length === 6) verifyCode();
+        });
+
+        input.addEventListener('paste', e => {
+          e.preventDefault();
+
+          const pastedData = e.clipboardData
+            .getData('text')
+            .replace(/\D/g, '')
+            .slice(0, 6);
+
+          pastedData.split('').forEach((digit, i) => {
+            if (codeInputs[i]) codeInputs[i].value = digit;
+          });
+
+          updateVerifyButton();
+
+          if (pastedData.length === 6) codeInputs[5].focus();
+        });
+      });
+
+      // Initialize
+      updateUI();
+    </script>
+  </body>
+</html>
